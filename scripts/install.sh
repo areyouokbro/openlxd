@@ -200,10 +200,10 @@ create_config() {
 server:
   port: 8443
   host: "0.0.0.0"
-  https: false                    # 默认使用 HTTP，如需 HTTPS 请改为 true
-  domain: ""                      # 你的域名（用于 Let's Encrypt）
+  https: true                     # 启用 HTTPS
+  domain: ""                      # 留空使用自签名证书
   cert_dir: "/etc/openlxd/certs" # 证书存储目录
-  auto_tls: false                 # 自动申请 Let's Encrypt 证书
+  auto_tls: false                 # 使用自签名证书，不使用 Let's Encrypt
 
 security:
   api_hash: "$API_KEY"
@@ -354,8 +354,8 @@ show_install_info() {
     echo ""
     echo "API 信息:"
     echo "  API Key: $API_KEY"
-    echo "  API 地址: http://$SERVER_IP:8443"
-    echo "  Web 管理: http://$SERVER_IP:8443/admin/login"
+    echo "  API 地址: https://$SERVER_IP:8443"
+    echo "  Web 管理: https://$SERVER_IP:8443/admin/login"
     echo ""
     echo "Web 登录凭据:"
     echo "  用户名: admin"
@@ -371,9 +371,9 @@ show_install_info() {
     echo "重要提示:"
     echo "  1. 请妃善保管 API Key"
     echo "  2. 建议修改默认管理员密码"
-    echo "  3. 默认使用 HTTP，如需 HTTPS 请编辑 /etc/openlxd/config.yaml"
-    echo "  4. WHMCS 对接请使用 http://$SERVER_IP:8443 和上述 API Key"
-    echo "  5. 建议使用 Nginx 反向代理到 443 端口并配置 SSL"
+    echo "  3. 默认使用自签名证书，浏览器会提示不安全（忽略即可）"
+    echo "  4. WHMCS 对接请使用 https://$SERVER_IP:8443 和上述 API Key"
+    echo "  5. WHMCS 中需要禁用 SSL 验证或使用 Nginx 反向代理配置正式证书"
     echo ""
     echo "========================================"
     echo ""
