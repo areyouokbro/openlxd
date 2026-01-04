@@ -43,6 +43,30 @@ func InitDB(dbPath string) error {
 		return fmt.Errorf("数据库迁移失败: %v", err)
 	}
 
+	// 创建默认管理员账号（如果不存在）
+	var adminCount int64
+	DB.Model(&User{}).Where("role = ?", "admin").Count(&adminCount)
+	if adminCount == 0 {
+		// 使用 bcrypt 加密密码
+		passwordHash := "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy" // admin123 的 bcrypt hash
+		adminUser := User{
+			Username:     "admin",
+			Email:        "admin@openlxd.local",
+			PasswordHash: passwordHash,
+			APIKey:       "default-api-key-please-change",
+			Role:         "admin",
+			Status:       "active",
+		}
+		if err := DB.Create(&adminUser).Error; err != nil {
+			log.Printf("警告: 创建默认管理员账号失败: %v", err)
+		} else {
+			log.Println("✓ 已创建默认管理员账号")
+			log.Println("  用户名: admin")
+			log.Println("  密码: admin123")
+			log.Println("  API Key: default-api-key-please-change")
+		}
+	}
+
 	log.Println("数据库初始化成功")
 	return nil
 }
