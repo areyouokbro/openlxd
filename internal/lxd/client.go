@@ -63,6 +63,12 @@ func GetContainerState(name string) (*api.InstanceState, error) {
 
 // CreateContainer 创建容器
 func CreateContainer(req CreateContainerRequest) error {
+	// 使用修复后的版本
+	return CreateContainerFixed(req)
+}
+
+// CreateContainerOld 创建容器（旧版本，已废弃）
+func CreateContainerOld(req CreateContainerRequest) error {
 	// 构建容器配置
 	config := map[string]string{
 		"limits.cpu":    fmt.Sprintf("%d", req.CPUs),
@@ -90,13 +96,25 @@ func CreateContainer(req CreateContainerRequest) error {
 		},
 	}
 
+	// 解析镜像名称
+	var imageServer, imageAlias string
+	if strings.Contains(req.Image, ":") {
+		// 格式: server:image (例如: images:alpine/3.19)
+		parts := strings.SplitN(req.Image, ":", 2)
+		imageServer = parts[0]
+		imageAlias = parts[1]
+	} else {
+		// 本地镜像
+		imageAlias = req.Image
+	}
+
 	// 创建容器请求
 	instanceReq := api.InstancesPost{
 		Name: req.Hostname,
 		Type: api.InstanceTypeContainer,
 		Source: api.InstanceSource{
 			Type:  "image",
-			Alias: req.Image,
+			Alias: imageAlias,
 		},
 		InstancePut: api.InstancePut{
 			Config:  config,
@@ -105,7 +123,18 @@ func CreateContainer(req CreateContainerRequest) error {
 	}
 
 	// 创建容器
-	op, err := Client.CreateInstance(instanceReq)
+	var op lxd.Operation
+	var err error
+	
+	if imageServer != "" {
+		// 使用远程镜像服务器
+		imageServer := Client.UseTarget(imageServer)
+		op, err = imageServer.CreateInstance(instanceReq)
+	} else {
+		// 使用本地镜像
+		op, err = Client.CreateInstance(instanceReq)
+	}
+	
 	if err != nil {
 		return fmt.Errorf("创建容器失败: %v", err)
 	}
