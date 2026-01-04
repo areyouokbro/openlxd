@@ -106,10 +106,10 @@ install_dependencies() {
     case $OS in
         ubuntu|debian)
             apt-get update -qq
-            apt-get install -y curl wget tar gzip unzip iptables sqlite3 net-tools >> "$LOG_FILE" 2>&1
+            apt-get install -y curl wget tar gzip unzip iptables sqlite3 net-tools file >> "$LOG_FILE" 2>&1
             ;;
         centos|rhel|rocky)
-            yum install -y curl wget tar gzip unzip iptables sqlite net-tools >> "$LOG_FILE" 2>&1
+            yum install -y curl wget tar gzip unzip iptables sqlite net-tools file >> "$LOG_FILE" 2>&1
             ;;
         *)
             print_warning "未知的操作系统，跳过依赖安装"
@@ -217,16 +217,33 @@ install_from_github() {
     if wget --timeout=60 --tries=3 --show-progress --progress=bar:force "$DOWNLOAD_URL" -O "$TMP_FILE" 2>&1 | tee -a "$LOG_FILE"; then
         # 验证下载的文件
         if [ -f "$TMP_FILE" ] && [ -s "$TMP_FILE" ]; then
-            # 检查文件是否为 ELF 可执行文件
-            if file "$TMP_FILE" | grep -q "ELF"; then
-                mv "$TMP_FILE" "$BIN_PATH"
-                chmod +x "$BIN_PATH"
-                print_success "下载完成"
-            else
-                print_error "下载的文件不是有效的可执行文件"
+            # 检查文件大小（应该大于 10MB）
+            FILE_SIZE=$(stat -c%s "$TMP_FILE" 2>/dev/null || stat -f%z "$TMP_FILE" 2>/dev/null || echo "0")
+            if [ "$FILE_SIZE" -lt 10000000 ]; then
+                print_error "下载的文件大小不正确 ($FILE_SIZE bytes)"
                 rm -f "$TMP_FILE"
                 exit 1
             fi
+            
+            # 检查文件是否为 ELF 可执行文件
+            if command -v file &> /dev/null; then
+                if ! file "$TMP_FILE" | grep -q "ELF"; then
+                    print_error "下载的文件不是有效的可执行文件"
+                    rm -f "$TMP_FILE"
+                    exit 1
+                fi
+            else
+                # 如果没有 file 命令，检查 ELF 魔数
+                if ! head -c 4 "$TMP_FILE" | grep -q "^\x7fELF"; then
+                    print_error "下载的文件不是有效的可执行文件"
+                    rm -f "$TMP_FILE"
+                    exit 1
+                fi
+            fi
+            
+            mv "$TMP_FILE" "$BIN_PATH"
+            chmod +x "$BIN_PATH"
+            print_success "下载完成"
         else
             print_error "下载的文件为空或不存在"
             rm -f "$TMP_FILE"
