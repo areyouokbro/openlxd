@@ -1,11 +1,20 @@
 // ========== 实时监控 ==========
 
+// Chart.js 图表实例
+let cpuChart = null;
+let memoryChart = null;
+let diskChart = null;
+let networkChart = null;
+
 async function loadMonitorData() {
     // 加载当前系统指标
-    loadCurrentSystemMetrics();
+    await loadCurrentSystemMetrics();
+    
+    // 加载历史数据并绘制图表
+    await loadHistoricalData();
     
     // 加载容器资源统计
-    loadResourceStats();
+    await loadResourceStats();
 }
 
 async function loadCurrentSystemMetrics() {
@@ -22,6 +31,241 @@ async function loadCurrentSystemMetrics() {
     document.getElementById('monitor-memory').textContent = metric.memory_usage ? metric.memory_usage.toFixed(2) + '%' : '-';
     document.getElementById('monitor-disk').textContent = metric.disk_usage ? metric.disk_usage.toFixed(2) + '%' : '-';
     document.getElementById('monitor-load').textContent = metric.load_average_1 ? metric.load_average_1.toFixed(2) : '-';
+}
+
+async function loadHistoricalData() {
+    // 获取最近1小时的数据
+    const data = await apiRequest('/api/monitor/system?hours=1');
+    
+    if (!data || data.code !== 200 || !data.data || data.data.length === 0) {
+        console.log('没有历史监控数据');
+        return;
+    }
+    
+    const metrics = data.data;
+    
+    // 提取时间标签和数据
+    const labels = metrics.map(m => {
+        const date = new Date(m.created_at);
+        return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    });
+    
+    const cpuData = metrics.map(m => m.cpu_usage);
+    const memoryData = metrics.map(m => m.memory_usage);
+    const diskData = metrics.map(m => m.disk_usage);
+    const networkRxData = metrics.map(m => (m.network_rx_rate || 0) / 1024 / 1024); // 转换为 MB/s
+    const networkTxData = metrics.map(m => (m.network_tx_rate || 0) / 1024 / 1024); // 转换为 MB/s
+    
+    // 绘制图表
+    drawCPUChart(labels, cpuData);
+    drawMemoryChart(labels, memoryData);
+    drawDiskChart(labels, diskData);
+    drawNetworkChart(labels, networkRxData, networkTxData);
+}
+
+function drawCPUChart(labels, data) {
+    const ctx = document.getElementById('cpu-chart');
+    if (!ctx) return;
+    
+    if (cpuChart) {
+        cpuChart.destroy();
+    }
+    
+    cpuChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'CPU 使用率 (%)',
+                data: data,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'CPU 使用率'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function drawMemoryChart(labels, data) {
+    const ctx = document.getElementById('memory-chart');
+    if (!ctx) return;
+    
+    if (memoryChart) {
+        memoryChart.destroy();
+    }
+    
+    memoryChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '内存使用率 (%)',
+                data: data,
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: '内存使用率'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function drawDiskChart(labels, data) {
+    const ctx = document.getElementById('disk-chart');
+    if (!ctx) return;
+    
+    if (diskChart) {
+        diskChart.destroy();
+    }
+    
+    diskChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '磁盘使用率 (%)',
+                data: data,
+                borderColor: 'rgb(255, 205, 86)',
+                backgroundColor: 'rgba(255, 205, 86, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: '磁盘使用率'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function drawNetworkChart(labels, rxData, txData) {
+    const ctx = document.getElementById('network-chart');
+    if (!ctx) return;
+    
+    if (networkChart) {
+        networkChart.destroy();
+    }
+    
+    networkChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '接收速率 (MB/s)',
+                    data: rxData,
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: '发送速率 (MB/s)',
+                    data: txData,
+                    borderColor: 'rgb(153, 102, 255)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: '网络速率'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(2) + ' MB/s';
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 async function loadResourceStats() {

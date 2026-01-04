@@ -72,6 +72,15 @@ function switchTab(tabName) {
         case 'monitor':
             loadMonitorData();
             break;
+        case 'snapshot':
+            loadSnapshots();
+            break;
+        case 'clone':
+            // 克隆页面不需要加载数据
+            break;
+        case 'dns':
+            loadDNSConfig();
+            break;
         case 'quota':
             loadQuotas();
             break;
