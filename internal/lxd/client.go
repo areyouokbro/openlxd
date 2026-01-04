@@ -1,186 +1,311 @@
 package lxd
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net"
-	"net/http"
 	"time"
+
+	lxd "github.com/canonical/lxd/client"
+	"github.com/canonical/lxd/shared/api"
 )
 
-var (
-	httpClient *http.Client
-	socketPath string
-	isAvailable bool
-)
+var Client lxd.InstanceServer
 
-// InitLXD 初始化 LXD 客户端连接
-func InitLXD(socket string) error {
-	if socket == "" {
-		socket = "/var/snap/lxd/common/lxd/unix.socket"
-	}
-	socketPath = socket
-	
-	// 创建 Unix Socket HTTP 客户端
-	httpClient = &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", socketPath)
-			},
-		},
-		Timeout: 30 * time.Second,
-	}
-	
-	// 测试连接
-	resp, err := httpClient.Get("http://unix/1.0")
+// InitLXD 初始化 LXD 客户端
+func InitLXD(socketPath string) error {
+	var err error
+	Client, err = lxd.ConnectLXDUnix(socketPath, nil)
 	if err != nil {
-		log.Printf("警告: 无法连接到 LXD (%s): %v", socketPath, err)
-		log.Println("后端将以 Mock 模式运行，API 接口可用但不会真实操作容器")
-		isAvailable = false
-		return nil
+		return fmt.Errorf("LXD 连接失败: %v", err)
 	}
-	defer resp.Body.Close()
-	
-	if resp.StatusCode == 200 {
-		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
-		if metadata, ok := result["metadata"].(map[string]interface{}); ok {
-			log.Printf("LXD 连接成功: %v (API: %v)", 
-				metadata["environment"].(map[string]interface{})["server_name"],
-				metadata["api_version"])
-		}
-		isAvailable = true
-	} else {
-		log.Printf("警告: LXD API 返回错误状态: %d", resp.StatusCode)
-		isAvailable = false
+
+	// 测试连接
+	server, _, err := Client.GetServer()
+	if err != nil {
+		return fmt.Errorf("LXD 服务器信息获取失败: %v", err)
 	}
-	
+
+	log.Printf("LXD 连接成功: %s", server.Environment.ServerName)
 	return nil
 }
 
-// IsLXDAvailable 检查 LXD 是否可用
-func IsLXDAvailable() bool {
-	return isAvailable
+// ListContainers 获取所有容器列表
+func ListContainers() ([]api.Instance, error) {
+	instances, err := Client.GetInstances(api.InstanceTypeContainer)
+	if err != nil {
+		return nil, fmt.Errorf("获取容器列表失败: %v", err)
+	}
+	return instances, nil
 }
 
-// lxdRequest 发送 LXD API 请求
-func lxdRequest(method, path string, body interface{}) (map[string]interface{}, error) {
-	if !isAvailable {
-		return nil, fmt.Errorf("LXD not available")
-	}
-	
-	var reqBody io.Reader
-	if body != nil {
-		jsonData, _ := json.Marshal(body)
-		reqBody = bytes.NewBuffer(jsonData)
-	}
-	
-	req, err := http.NewRequest(method, "http://unix"+path, reqBody)
+// GetContainer 获取单个容器信息
+func GetContainer(name string) (*api.Instance, error) {
+	instance, _, err := Client.GetInstance(name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("获取容器信息失败: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	
-	var result map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-	
-	// 检查操作状态
-	if statusCode, ok := result["status_code"].(float64); ok && statusCode != 200 {
-		return nil, fmt.Errorf("LXD API error: %v", result["error"])
-	}
-	
-	// 如果是异步操作，等待完成
-	if result["type"] == "async" {
-		opID := result["operation"].(string)
-		return waitOperation(opID)
-	}
-	
-	return result, nil
-}
-
-// waitOperation 等待异步操作完成
-func waitOperation(opID string) (map[string]interface{}, error) {
-	for i := 0; i < 60; i++ {
-		resp, err := httpClient.Get("http://unix" + opID)
-		if err != nil {
-			return nil, err
-		}
-		
-		var result map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&result)
-		resp.Body.Close()
-		
-		if metadata, ok := result["metadata"].(map[string]interface{}); ok {
-			if status, ok := metadata["status"].(string); ok {
-				if status == "Success" {
-					return result, nil
-				} else if status == "Failure" {
-					return nil, fmt.Errorf("operation failed: %v", metadata["err"])
-				}
-			}
-		}
-		
-		time.Sleep(1 * time.Second)
-	}
-	
-	return nil, fmt.Errorf("operation timeout")
-}
-
-// ListContainers 列出所有容器
-func ListContainers() ([]string, error) {
-	result, err := lxdRequest("GET", "/1.0/instances?recursion=1", nil)
-	if err != nil {
-		return nil, err
-	}
-	
-	var containers []string
-	if metadata, ok := result["metadata"].([]interface{}); ok {
-		for _, item := range metadata {
-			if inst, ok := item.(map[string]interface{}); ok {
-				containers = append(containers, inst["name"].(string))
-			}
-		}
-	}
-	
-	return containers, nil
-}
-
-// GetContainer 获取容器信息
-func GetContainer(name string) (map[string]interface{}, error) {
-	result, err := lxdRequest("GET", "/1.0/instances/"+name, nil)
-	if err != nil {
-		return nil, err
-	}
-	
-	if metadata, ok := result["metadata"].(map[string]interface{}); ok {
-		return metadata, nil
-	}
-	
-	return nil, fmt.Errorf("invalid response")
+	return instance, nil
 }
 
 // GetContainerState 获取容器状态
-func GetContainerState(name string) (map[string]interface{}, error) {
-	result, err := lxdRequest("GET", "/1.0/instances/"+name+"/state", nil)
+func GetContainerState(name string) (*api.InstanceState, error) {
+	state, _, err := Client.GetInstanceState(name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("获取容器状态失败: %v", err)
 	}
-	
-	if metadata, ok := result["metadata"].(map[string]interface{}); ok {
-		return metadata, nil
+	return state, nil
+}
+
+// CreateContainer 创建容器
+func CreateContainer(req CreateContainerRequest) error {
+	// 构建容器配置
+	config := map[string]string{
+		"limits.cpu":    fmt.Sprintf("%d", req.CPUs),
+		"limits.memory": fmt.Sprintf("%dMB", req.Memory),
 	}
-	
-	return nil, fmt.Errorf("invalid response")
+
+	// 如果指定了网络限制
+	if req.Ingress > 0 {
+		config["limits.network.priority"] = "10"
+	}
+
+	// 构建设备配置
+	devices := map[string]map[string]string{
+		"root": {
+			"path": "/",
+			"pool": "default",
+			"type": "disk",
+			"size": fmt.Sprintf("%dGB", req.Disk),
+		},
+		"eth0": {
+			"name":    "eth0",
+			"type":    "nic",
+			"nictype": "bridged",
+			"parent":  "lxdbr0",
+		},
+	}
+
+	// 创建容器请求
+	instanceReq := api.InstancesPost{
+		Name: req.Hostname,
+		Type: api.InstanceTypeContainer,
+		Source: api.InstanceSource{
+			Type:  "image",
+			Alias: req.Image,
+		},
+		InstancePut: api.InstancePut{
+			Config:  config,
+			Devices: devices,
+		},
+	}
+
+	// 创建容器
+	op, err := Client.CreateInstance(instanceReq)
+	if err != nil {
+		return fmt.Errorf("创建容器失败: %v", err)
+	}
+
+	// 等待操作完成
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("容器创建操作失败: %v", err)
+	}
+
+	// 如果指定了密码，设置 root 密码
+	if req.Password != "" {
+		// 注意：这需要容器启动后执行
+		log.Printf("容器 %s 创建成功，密码将在启动后设置", req.Hostname)
+	}
+
+	return nil
+}
+
+// StartContainer 启动容器
+func StartContainer(name string) error {
+	reqState := api.InstanceStatePut{
+		Action:  "start",
+		Timeout: -1,
+	}
+
+	op, err := Client.UpdateInstanceState(name, reqState, "")
+	if err != nil {
+		return fmt.Errorf("启动容器失败: %v", err)
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("容器启动操作失败: %v", err)
+	}
+
+	log.Printf("容器 %s 启动成功", name)
+	return nil
+}
+
+// StopContainer 停止容器
+func StopContainer(name string) error {
+	reqState := api.InstanceStatePut{
+		Action:  "stop",
+		Timeout: 30,
+		Force:   false,
+	}
+
+	op, err := Client.UpdateInstanceState(name, reqState, "")
+	if err != nil {
+		return fmt.Errorf("停止容器失败: %v", err)
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("容器停止操作失败: %v", err)
+	}
+
+	log.Printf("容器 %s 停止成功", name)
+	return nil
+}
+
+// RestartContainer 重启容器
+func RestartContainer(name string) error {
+	reqState := api.InstanceStatePut{
+		Action:  "restart",
+		Timeout: 30,
+		Force:   false,
+	}
+
+	op, err := Client.UpdateInstanceState(name, reqState, "")
+	if err != nil {
+		return fmt.Errorf("重启容器失败: %v", err)
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("容器重启操作失败: %v", err)
+	}
+
+	log.Printf("容器 %s 重启成功", name)
+	return nil
+}
+
+// DeleteContainer 删除容器
+func DeleteContainer(name string) error {
+	// 先停止容器
+	state, _, _ := Client.GetInstanceState(name)
+	if state != nil && state.Status == "Running" {
+		StopContainer(name)
+		time.Sleep(2 * time.Second)
+	}
+
+	// 删除容器
+	op, err := Client.DeleteInstance(name)
+	if err != nil {
+		return fmt.Errorf("删除容器失败: %v", err)
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("容器删除操作失败: %v", err)
+	}
+
+	log.Printf("容器 %s 删除成功", name)
+	return nil
+}
+
+// GetContainerIP 获取容器IP地址
+func GetContainerIP(name string) (string, string) {
+	state, err := GetContainerState(name)
+	if err != nil {
+		return "", ""
+	}
+
+	var ipv4, ipv6 string
+	if eth0, ok := state.Network["eth0"]; ok {
+		for _, addr := range eth0.Addresses {
+			if addr.Family == "inet" && addr.Scope == "global" {
+				ipv4 = addr.Address
+			}
+			if addr.Family == "inet6" && addr.Scope == "global" {
+				ipv6 = addr.Address
+			}
+		}
+	}
+
+	return ipv4, ipv6
+}
+
+// ResetContainerPassword 重置容器密码
+func ResetContainerPassword(name, password string) error {
+	// 构建执行命令
+	execReq := api.InstanceExecPost{
+		Command: []string{"/bin/bash", "-c", fmt.Sprintf("echo 'root:%s' | chpasswd", password)},
+	}
+
+	op, err := Client.ExecInstance(name, execReq, nil)
+	if err != nil {
+		return fmt.Errorf("执行密码重置命令失败: %v", err)
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("密码重置操作失败: %v", err)
+	}
+
+	log.Printf("容器 %s 密码重置成功", name)
+	return nil
+}
+
+// ReinstallContainer 重装容器系统
+func ReinstallContainer(name, newImage string) error {
+	// 获取原容器配置
+	instance, _, err := Client.GetInstance(name)
+	if err != nil {
+		return fmt.Errorf("获取容器配置失败: %v", err)
+	}
+
+	// 删除原容器
+	err = DeleteContainer(name)
+	if err != nil {
+		return fmt.Errorf("删除原容器失败: %v", err)
+	}
+
+	// 等待删除完成
+	time.Sleep(2 * time.Second)
+
+	// 使用新镜像创建容器
+	instanceReq := api.InstancesPost{
+		Name: name,
+		Type: api.InstanceTypeContainer,
+		Source: api.InstanceSource{
+			Type:  "image",
+			Alias: newImage,
+		},
+		InstancePut: api.InstancePut{
+			Config:  instance.Config,
+			Devices: instance.Devices,
+		},
+	}
+
+	op, err := Client.CreateInstance(instanceReq)
+	if err != nil {
+		return fmt.Errorf("重建容器失败: %v", err)
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("容器重建操作失败: %v", err)
+	}
+
+	log.Printf("容器 %s 重装成功，新镜像: %s", name, newImage)
+	return nil
+}
+
+// CreateContainerRequest 创建容器请求结构
+type CreateContainerRequest struct {
+	Hostname     string
+	CPUs         int
+	Memory       int
+	Disk         int
+	Image        string
+	Password     string
+	Ingress      int
+	Egress       int
+	CPUAllowance int
 }
