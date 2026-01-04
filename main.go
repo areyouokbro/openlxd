@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -68,7 +69,44 @@ func main() {
 		log.Println("检测到 LXD 未安装或未启动")
 		log.Println("========================================")
 		log.Println("")
-		log.Println("请安装 LXD：")
+		
+		// 尝试自动安装 LXD
+		if os.Getuid() == 0 { // 检查是否以 root 运行
+			log.Println("检测到以 root 权限运行，尝试自动安装 LXD...")
+			log.Println("")
+			
+			if autoInstallLXD() {
+				log.Println("")
+				log.Println("✓ LXD 安装成功！")
+				log.Println("正在重新初始化 LXD 客户端...")
+				log.Println("")
+				
+				// 等待 LXD 启动
+				time.Sleep(3 * time.Second)
+				
+				// 重试初始化
+				if err := lxd.InitLXD(cfg.LXD.Socket); err != nil {
+					log.Printf("⚠️  LXD 初始化仍然失败: %v\n", err)
+					log.Println("请手动检查 LXD 状态： lxc list")
+					lxdConnected = false
+				} else {
+					log.Println("✓ LXD 客户端初始化成功")
+					lxdConnected = true
+					
+					// 同步容器
+					if err := syncContainersFromLXD(); err != nil {
+						log.Printf("警告: 容器同步失败: %v", err)
+					}
+					return // 成功后跳过后面的提示
+				}
+			} else {
+				log.Println("")
+				log.Println("✗ LXD 自动安装失败")
+			}
+			log.Println("")
+		}
+		
+		log.Println("请手动安装 LXD：")
 		log.Println("  sudo snap install lxd")
 		log.Println("  sudo lxd init --auto")
 		log.Println("")
@@ -733,4 +771,111 @@ func generateSelfSignedCert(certFile, keyFile string) error {
 
 	log.Println("自签名证书生成成功")
 	return nil
+}
+
+// autoInstallLXD 自动安装 LXD
+func autoInstallLXD() bool {
+	log.Println("正在检测系统...")
+	
+	// 检查是否有 snap
+	if _, err := exec.LookPath("snap"); err == nil {
+		log.Println("检测到 snap，使用 snap 安装 LXD...")
+		
+		// 安装 LXD
+		cmd := exec.Command("snap", "install", "lxd")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("snap install lxd 失败: %v", err)
+			return false
+		}
+		
+		log.Println("正在初始化 LXD...")
+		
+		// 初始化 LXD
+		cmd = exec.Command("lxd", "init", "--auto")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("lxd init 失败: %v", err)
+			return false
+		}
+		
+		return true
+	}
+	
+	// 检查是否有 apt
+	if _, err := exec.LookPath("apt-get"); err == nil {
+		log.Println("检测到 apt，使用 apt 安装 LXD...")
+		
+		// 更新包列表
+		log.Println("正在更新包列表...")
+		cmd := exec.Command("apt-get", "update")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("apt-get update 失败: %v", err)
+			return false
+		}
+		
+		// 安装 LXD
+		log.Println("正在安装 LXD...")
+		cmd = exec.Command("apt-get", "install", "-y", "lxd", "lxd-client")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("apt-get install 失败: %v", err)
+			return false
+		}
+		
+		log.Println("正在初始化 LXD...")
+		
+		// 创建 preseed 配置
+		preseed := `config: {}
+networks:
+- config:
+    ipv4.address: auto
+    ipv6.address: auto
+  description: ""
+  name: lxdbr0
+  type: ""
+  project: default
+storage_pools:
+- config:
+    size: 30GB
+  description: ""
+  name: default
+  driver: dir
+profiles:
+- config: {}
+  description: ""
+  devices:
+    eth0:
+      name: eth0
+      network: lxdbr0
+      type: nic
+    root:
+      path: /
+      pool: default
+      type: disk
+  name: default
+projects: []
+cluster: null
+`
+		
+		// 初始化 LXD
+		cmd = exec.Command("lxd", "init", "--preseed")
+		cmd.Stdin = strings.NewReader(preseed)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Printf("lxd init 失败: %v", err)
+			return false
+		}
+		
+		return true
+	}
+	
+	log.Println("未检测到 snap 或 apt，无法自动安装")
+	return false
 }
