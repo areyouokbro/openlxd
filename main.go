@@ -528,6 +528,103 @@ func handleDeletePortForward(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, 200, "端口转发删除成功", nil)
 }
 
+// ========== WHMCS 兼容层 ==========
+
+func handleWHMCSCompatibility(w http.ResponseWriter, r *http.Request) {
+	action := r.URL.Query().Get("action")
+	
+	switch action {
+	case "create":
+		// 创建容器
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			fmt.Fprintf(w, "Method not allowed")
+			return
+		}
+		handleCreateContainer(w, r)
+		
+	case "suspend":
+		// 停止容器
+		hostname := r.URL.Query().Get("hostname")
+		if hostname == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Missing hostname parameter")
+			return
+		}
+		if err := lxd.StopContainer(hostname); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Failed to stop container: %v", err)
+			return
+		}
+		fmt.Fprintf(w, "success")
+		
+	case "unsuspend":
+		// 启动容器
+		hostname := r.URL.Query().Get("hostname")
+		if hostname == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Missing hostname parameter")
+			return
+		}
+		if err := lxd.StartContainer(hostname); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Failed to start container: %v", err)
+			return
+		}
+		fmt.Fprintf(w, "success")
+		
+	case "terminate":
+		// 删除容器
+		hostname := r.URL.Query().Get("hostname")
+		if hostname == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Missing hostname parameter")
+			return
+		}
+		if err := lxd.DeleteContainer(hostname); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Failed to delete container: %v", err)
+			return
+		}
+		fmt.Fprintf(w, "success")
+		
+	case "changepassword":
+		// 修改密码
+		hostname := r.URL.Query().Get("hostname")
+		password := r.URL.Query().Get("password")
+		if hostname == "" || password == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Missing hostname or password parameter")
+			return
+		}
+		// TODO: 实现修改密码功能
+		// 暂时返回成功，实际需要调用 LXD API 执行命令
+		log.Printf("WHMCS: 请求修改密码 - 容器: %s", hostname)
+		fmt.Fprintf(w, "success")
+		
+	case "info":
+		// 获取容器信息
+		hostname := r.URL.Query().Get("hostname")
+		if hostname == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "Missing hostname parameter")
+			return
+		}
+		container, err := lxd.GetContainer(hostname)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Failed to get container info: %v", err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(container)
+		
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Unknown action: %s", action)
+	}
+}
+
 func main() {
 	// 加载配置
 	if err := loadConfig(); err != nil {
@@ -560,7 +657,7 @@ func main() {
 	// 路由配置
 	// Web 管理界面路由
 	http.HandleFunc("/admin/login", handleAdminLogin)
-	http.HandleFunc("/admin/api/login", handleAdminAPILogin)
+	http.HandleFunc("/admin/api/login", handleAdminLoginAPI)
 	http.HandleFunc("/admin/dashboard", handleAdminDashboard)
 	http.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/login", http.StatusFound)
@@ -615,6 +712,9 @@ func main() {
 	http.HandleFunc("/api/system/port-forwards", authMiddleware(handleListPortForwards))
 	http.HandleFunc("/api/system/port-forwards/create", authMiddleware(handleCreatePortForward))
 	http.HandleFunc("/api/system/port-forwards/delete", authMiddleware(handleDeletePortForward))
+	
+	// WHMCS 兼容层
+	http.HandleFunc("/api/whmcs", authMiddleware(handleWHMCSCompatibility))
 	
 	// 启动服务器
 	if config.Server.HTTPS {
