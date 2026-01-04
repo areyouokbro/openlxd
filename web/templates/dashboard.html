@@ -36,17 +36,51 @@
             gap: 15px;
         }
         
-        .btn-logout {
+        .btn {
             padding: 8px 16px;
-            background: #f44336;
-            color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 30px auto;
             padding: 0 20px;
         }
@@ -62,7 +96,7 @@
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         
         .stat-card h3 {
@@ -74,34 +108,38 @@
         .stat-card .value {
             font-size: 32px;
             font-weight: bold;
-            color: #667eea;
-        }
-        
-        .containers-section {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .section-header h2 {
             color: #333;
         }
         
-        .btn-refresh {
-            padding: 8px 16px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .stat-card.running .value {
+            color: #4caf50;
+        }
+        
+        .stat-card.stopped .value {
+            color: #f44336;
+        }
+        
+        .actions-bar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .actions-left {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .containers-table {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
         
         table {
@@ -109,23 +147,33 @@
             border-collapse: collapse;
         }
         
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
+        thead {
+            background: #f8f9fa;
         }
         
         th {
-            background: #f9f9f9;
-            color: #666;
+            padding: 15px;
+            text-align: left;
             font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
         }
         
-        .status {
-            padding: 4px 8px;
-            border-radius: 4px;
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
         }
         
         .status-running {
@@ -138,159 +186,475 @@
             color: #f44336;
         }
         
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
         .loading {
             text-align: center;
             padding: 40px;
+            color: #666;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            color: #333;
+            font-size: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .alert {
+            padding: 12px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #4caf50;
+            border: 1px solid #4caf50;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
             color: #999;
+        }
+        
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>OpenLXD 管理后台</h1>
+        <h1>🐳 OpenLXD 管理后台</h1>
         <div class="user-info">
-            <span id="username">管理员</span>
-            <button class="btn-logout" onclick="logout()">退出登录</button>
+            <span id="username">admin</span>
+            <button class="btn btn-danger btn-sm" onclick="logout()">退出登录</button>
         </div>
     </div>
     
     <div class="container">
+        <div id="alert-container"></div>
+        
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>总容器数</h3>
-                <div class="value" id="totalContainers">-</div>
+                <div class="value" id="total-containers">-</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card running">
                 <h3>运行中</h3>
-                <div class="value" id="runningContainers">-</div>
+                <div class="value" id="running-containers">-</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stopped">
                 <h3>已停止</h3>
-                <div class="value" id="stoppedContainers">-</div>
+                <div class="value" id="stopped-containers">-</div>
             </div>
             <div class="stat-card">
                 <h3>系统负载</h3>
-                <div class="value" id="systemLoad">-</div>
+                <div class="value" id="system-load">-</div>
             </div>
         </div>
         
-        <div class="containers-section">
-            <div class="section-header">
-                <h2>容器列表</h2>
-                <button class="btn-refresh" onclick="loadContainers()">刷新</button>
+        <div class="actions-bar">
+            <div class="actions-left">
+                <button class="btn btn-primary" onclick="showCreateModal()">
+                    ➕ 创建容器
+                </button>
+                <button class="btn btn-secondary" onclick="loadContainers()">
+                    🔄 刷新
+                </button>
             </div>
-            
-            <div id="containersTable">
-                <div class="loading">加载中...</div>
+        </div>
+        
+        <div class="containers-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>主机名</th>
+                        <th>IP 地址</th>
+                        <th>镜像</th>
+                        <th>状态</th>
+                        <th>CPU</th>
+                        <th>内存</th>
+                        <th>流量</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="containers-tbody">
+                    <tr>
+                        <td colspan="8" class="loading">加载中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 创建容器模态框 -->
+    <div id="create-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>创建新容器</h2>
             </div>
+            <form id="create-form">
+                <div class="form-group">
+                    <label>主机名 *</label>
+                    <input type="text" name="hostname" required placeholder="例如: web-server-01">
+                </div>
+                <div class="form-group">
+                    <label>镜像 *</label>
+                    <select name="image" required>
+                        <option value="">请选择镜像</option>
+                        <option value="ubuntu:22.04">Ubuntu 22.04</option>
+                        <option value="ubuntu:20.04">Ubuntu 20.04</option>
+                        <option value="debian:11">Debian 11</option>
+                        <option value="debian:12">Debian 12</option>
+                        <option value="centos:7">CentOS 7</option>
+                        <option value="rocky:8">Rocky Linux 8</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>CPU 核心数</label>
+                    <input type="number" name="cpu" value="2" min="1" max="32">
+                </div>
+                <div class="form-group">
+                    <label>内存 (GB)</label>
+                    <input type="number" name="memory" value="2" min="1" max="128">
+                </div>
+                <div class="form-group">
+                    <label>磁盘 (GB)</label>
+                    <input type="number" name="disk" value="20" min="10" max="1000">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </div>
+            </form>
         </div>
     </div>
     
     <script>
-        const API_KEY = localStorage.getItem('admin_token') || '';
+        const API_KEY = localStorage.getItem('api_key');
         
-        async function apiRequest(url, options = {}) {
-            const headers = {
-                'X-API-Hash': API_KEY,
-                'Content-Type': 'application/json',
-                ...options.headers
-            };
-            
-            const response = await fetch(url, { ...options, headers });
-            return response.json();
-        }
-        
-        async function loadStats() {
-            try {
-                const data = await apiRequest('/api/system/stats');
-                if (data.code === 200) {
-                    document.getElementById('systemLoad').textContent = data.data.load || '-';
-                }
-            } catch (error) {
-                console.error('加载统计数据失败:', error);
-            }
-        }
-        
-        async function loadContainers() {
-            try {
-                const data = await apiRequest('/api/system/containers');
-                if (data.code === 200) {
-                    const containers = data.data || [];
-                    
-                    document.getElementById('totalContainers').textContent = containers.length;
-                    document.getElementById('runningContainers').textContent = 
-                        containers.filter(c => c.status === 'Running').length;
-                    document.getElementById('stoppedContainers').textContent = 
-                        containers.filter(c => c.status === 'Stopped').length;
-                    
-                    if (containers.length === 0) {
-                        document.getElementById('containersTable').innerHTML = 
-                            '<div class="loading">暂无容器</div>';
-                        return;
-                    }
-                    
-                    const tableHTML = `
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>主机名</th>
-                                    <th>IP 地址</th>
-                                    <th>镜像</th>
-                                    <th>状态</th>
-                                    <th>流量 (上传/下载)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${containers.map(c => `
-                                    <tr>
-                                        <td>${c.hostname || '-'}</td>
-                                        <td>${c.ipv4 || '-'}</td>
-                                        <td>${c.image || '-'}</td>
-                                        <td>
-                                            <span class="status status-${c.status === 'Running' ? 'running' : 'stopped'}">
-                                                ${c.status || 'Unknown'}
-                                            </span>
-                                        </td>
-                                        <td>${formatBytes(c.traffic_upload || 0)} / ${formatBytes(c.traffic_download || 0)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                    
-                    document.getElementById('containersTable').innerHTML = tableHTML;
-                }
-            } catch (error) {
-                console.error('加载容器列表失败:', error);
-                document.getElementById('containersTable').innerHTML = 
-                    '<div class="loading">加载失败，请检查 API Key 是否正确</div>';
-            }
-        }
-        
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
-        }
-        
-        function logout() {
-            localStorage.removeItem('admin_token');
-            window.location.href = '/admin/login';
-        }
-        
-        // 初始化
         if (!API_KEY) {
             window.location.href = '/admin/login';
-        } else {
-            loadStats();
-            loadContainers();
-            setInterval(() => {
-                loadStats();
-                loadContainers();
-            }, 30000); // 每30秒刷新一次
         }
+        
+        // API 请求封装
+        async function apiRequest(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'X-API-Hash': API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            const response = await fetch(url, { ...defaultOptions, ...options });
+            const data = await response.json();
+            
+            if (response.status === 401) {
+                showAlert('登录已过期，请重新登录', 'error');
+                setTimeout(() => {
+                    window.location.href = '/admin/login';
+                }, 2000);
+                return null;
+            }
+            
+            return data;
+        }
+        
+        // 显示提示信息
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+        
+        // 加载容器列表
+        async function loadContainers() {
+            const tbody = document.getElementById('containers-tbody');
+            tbody.innerHTML = '<tr><td colspan="8" class="loading">加载中...</td></tr>';
+            
+            const data = await apiRequest('/api/system/containers');
+            
+            if (!data || data.code !== 200) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">加载失败，请检查 API Key 是否正确</td></tr>';
+                return;
+            }
+            
+            const containers = data.data || [];
+            
+            if (containers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div>暂无容器，点击"创建容器"开始</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = containers.map(container => `
+                <tr>
+                    <td><strong>${container.hostname || '-'}</strong></td>
+                    <td>${container.ip || '-'}</td>
+                    <td>${container.image || '-'}</td>
+                    <td>
+                        <span class="status-badge status-${container.status === 'Running' ? 'running' : 'stopped'}">
+                            ${container.status === 'Running' ? '运行中' : '已停止'}
+                        </span>
+                    </td>
+                    <td>${container.cpu || '-'}</td>
+                    <td>${container.memory || '-'}</td>
+                    <td>${formatTraffic(container.traffic_up, container.traffic_down)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            ${container.status === 'Running' ? 
+                                `<button class="btn btn-warning btn-sm" onclick="stopContainer('${container.hostname}')">停止</button>
+                                 <button class="btn btn-warning btn-sm" onclick="restartContainer('${container.hostname}')">重启</button>` :
+                                `<button class="btn btn-success btn-sm" onclick="startContainer('${container.hostname}')">启动</button>`
+                            }
+                            <button class="btn btn-secondary btn-sm" onclick="showContainerDetails('${container.hostname}')">详情</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteContainer('${container.hostname}')">删除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // 更新统计
+            updateStats(containers);
+        }
+        
+        // 更新统计数据
+        function updateStats(containers) {
+            const total = containers.length;
+            const running = containers.filter(c => c.status === 'Running').length;
+            const stopped = total - running;
+            
+            document.getElementById('total-containers').textContent = total;
+            document.getElementById('running-containers').textContent = running;
+            document.getElementById('stopped-containers').textContent = stopped;
+            
+            // 加载系统统计
+            loadSystemStats();
+        }
+        
+        // 加载系统统计
+        async function loadSystemStats() {
+            const data = await apiRequest('/api/system/stats');
+            if (data && data.code === 200) {
+                document.getElementById('system-load').textContent = data.data.load || '-';
+            }
+        }
+        
+        // 格式化流量
+        function formatTraffic(up, down) {
+            const formatBytes = (bytes) => {
+                if (!bytes) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+            };
+            return `↑ ${formatBytes(up)} / ↓ ${formatBytes(down)}`;
+        }
+        
+        // 显示创建容器模态框
+        function showCreateModal() {
+            document.getElementById('create-modal').classList.add('active');
+        }
+        
+        // 关闭创建容器模态框
+        function closeCreateModal() {
+            document.getElementById('create-modal').classList.remove('active');
+            document.getElementById('create-form').reset();
+        }
+        
+        // 创建容器表单提交
+        document.getElementById('create-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                hostname: formData.get('hostname'),
+                image: formData.get('image'),
+                cpu: parseInt(formData.get('cpu')),
+                memory: parseInt(formData.get('memory')) * 1024, // 转换为 MB
+                disk: parseInt(formData.get('disk'))
+            };
+            
+            const result = await apiRequest('/api/system/containers', {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+            
+            if (result && result.code === 200) {
+                showAlert('容器创建成功！', 'success');
+                closeCreateModal();
+                loadContainers();
+            } else {
+                showAlert(result?.msg || '创建失败', 'error');
+            }
+        });
+        
+        // 启动容器
+        async function startContainer(hostname) {
+            if (!confirm(`确定要启动容器 ${hostname} 吗？`)) return;
+            
+            const result = await apiRequest(`/api/system/containers/${hostname}/action`, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'start' })
+            });
+            
+            if (result && result.code === 200) {
+                showAlert('容器启动成功', 'success');
+                loadContainers();
+            } else {
+                showAlert(result?.msg || '启动失败', 'error');
+            }
+        }
+        
+        // 停止容器
+        async function stopContainer(hostname) {
+            if (!confirm(`确定要停止容器 ${hostname} 吗？`)) return;
+            
+            const result = await apiRequest(`/api/system/containers/${hostname}/action`, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'stop' })
+            });
+            
+            if (result && result.code === 200) {
+                showAlert('容器停止成功', 'success');
+                loadContainers();
+            } else {
+                showAlert(result?.msg || '停止失败', 'error');
+            }
+        }
+        
+        // 重启容器
+        async function restartContainer(hostname) {
+            if (!confirm(`确定要重启容器 ${hostname} 吗？`)) return;
+            
+            const result = await apiRequest(`/api/system/containers/${hostname}/action`, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'restart' })
+            });
+            
+            if (result && result.code === 200) {
+                showAlert('容器重启成功', 'success');
+                loadContainers();
+            } else {
+                showAlert(result?.msg || '重启失败', 'error');
+            }
+        }
+        
+        // 删除容器
+        async function deleteContainer(hostname) {
+            if (!confirm(`⚠️ 确定要删除容器 ${hostname} 吗？此操作不可恢复！`)) return;
+            
+            const result = await apiRequest(`/api/system/containers/${hostname}`, {
+                method: 'DELETE'
+            });
+            
+            if (result && result.code === 200) {
+                showAlert('容器删除成功', 'success');
+                loadContainers();
+            } else {
+                showAlert(result?.msg || '删除失败', 'error');
+            }
+        }
+        
+        // 查看容器详情
+        function showContainerDetails(hostname) {
+            // TODO: 实现容器详情查看
+            showAlert('容器详情功能开发中...', 'success');
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('api_key');
+            window.location.href = '/admin/login';
+        }
+        
+        // 页面加载时初始化
+        loadContainers();
+        
+        // 自动刷新（每30秒）
+        setInterval(loadContainers, 30000);
     </script>
 </body>
 </html>
