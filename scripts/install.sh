@@ -6,8 +6,6 @@
 # 描述: 自动安装 OpenLXD 后端服务，支持多种安装方式
 #================================================================
 
-set -e
-
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -206,16 +204,43 @@ install_golang() {
 install_from_github() {
     print_info "从 GitHub 下载最新版本..."
     
-    GITHUB_REPO="yourusername/openlxd-backend"
+    GITHUB_REPO="areyouokbro/openlxd"
     DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/openlxd-linux-amd64"
     
-    wget -q --show-progress "$DOWNLOAD_URL" -O "$BIN_PATH"
+    print_info "下载地址: $DOWNLOAD_URL"
+    print_info "文件大小: ~16MB，请耐心等待..."
     
-    if [ $? -eq 0 ]; then
-        chmod +x "$BIN_PATH"
-        print_success "下载完成"
+    # 创建临时文件
+    TMP_FILE="/tmp/openlxd-download-$$"
+    
+    # 使用 wget 下载，添加超时和重试
+    if wget --timeout=60 --tries=3 --show-progress --progress=bar:force "$DOWNLOAD_URL" -O "$TMP_FILE" 2>&1 | tee -a "$LOG_FILE"; then
+        # 验证下载的文件
+        if [ -f "$TMP_FILE" ] && [ -s "$TMP_FILE" ]; then
+            # 检查文件是否为 ELF 可执行文件
+            if file "$TMP_FILE" | grep -q "ELF"; then
+                mv "$TMP_FILE" "$BIN_PATH"
+                chmod +x "$BIN_PATH"
+                print_success "下载完成"
+            else
+                print_error "下载的文件不是有效的可执行文件"
+                rm -f "$TMP_FILE"
+                exit 1
+            fi
+        else
+            print_error "下载的文件为空或不存在"
+            rm -f "$TMP_FILE"
+            exit 1
+        fi
     else
-        print_error "下载失败"
+        print_error "下载失败，请检查网络连接"
+        print_info ""
+        print_info "手动下载步骤:"
+        print_info "1. 访问: $DOWNLOAD_URL"
+        print_info "2. 下载文件到服务器"
+        print_info "3. 执行: mv openlxd-linux-amd64 $BIN_PATH && chmod +x $BIN_PATH"
+        print_info "4. 重新运行安装脚本，选择选项1（从预编译二进制文件安装）"
+        rm -f "$TMP_FILE"
         exit 1
     fi
 }
