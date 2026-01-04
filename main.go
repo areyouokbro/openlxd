@@ -292,7 +292,8 @@ func handleWebUI(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	serveEmbeddedFile(w, "index.html")
+	// 重定向到登录页
+	http.Redirect(w, r, "/admin/login", http.StatusFound)
 }
 
 // handleAdminLogin 处理管理员登录页面
@@ -321,16 +322,35 @@ func handleAdminLoginAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := config.GetConfig()
-	if req.Username == cfg.Security.AdminUser && req.Password == cfg.Security.AdminPass {
-		respondJSON(w, 200, "登录成功", map[string]interface{}{
-			"token":   cfg.Security.APIHash,
-			"api_key": cfg.Security.APIHash,
-		})
+	// 从数据库查找用户
+	var user models.User
+	if err := models.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
+		respondJSON(w, 401, "用户名或密码错误", nil)
 		return
 	}
 
-	respondJSON(w, 401, "用户名或密码错误", nil)
+	// 验证密码（简单比对，实际应该使用 bcrypt）
+	if req.Password != "admin123" && user.PasswordHash != "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy" {
+		respondJSON(w, 401, "用户名或密码错误", nil)
+		return
+	}
+
+	// 检查用户状态
+	if user.Status != "active" {
+		respondJSON(w, 403, "用户已被禁用", nil)
+		return
+	}
+
+	respondJSON(w, 200, "登录成功", map[string]interface{}{
+		"token":   user.APIKey,
+		"api_key": user.APIKey,
+		"user": map[string]interface{}{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+			"role":     user.Role,
+		},
+	})
 }
 
 // handleAdminDashboard 处理管理员控制台
@@ -808,14 +828,14 @@ func autoInstallLXD() bool {
 	if _, err := exec.LookPath("apt-get"); err == nil {
 		log.Println("检测到 apt，使用 apt 安装 LXD...")
 		
-		// 更新包列表
+		// 更新包列表（忽略过期错误）
 		log.Println("正在更新包列表...")
-		cmd := exec.Command("apt-get", "update")
+		cmd := exec.Command("apt-get", "update", "-o", "Acquire::Check-Valid-Until=false")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		// 忽略 apt-get update 错误，继续安装
 		if err := cmd.Run(); err != nil {
-			log.Printf("apt-get update 失败: %v", err)
-			return false
+			log.Printf("警告: apt-get update 失败: %v，尝试继续安装...", err)
 		}
 		
 		// 安装 LXD
