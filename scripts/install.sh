@@ -1,9 +1,9 @@
 #!/bin/bash
 #================================================================
 # OpenLXD Backend 一键安装脚本
-# 版本: 2.0
+# 版本: 2.1
 # 作者: OpenLXD Team
-# 描述: 自动安装 OpenLXD 后端服务，支持多种安装方式
+# 描述: 自动安装 OpenLXD 后端服务，支持纯净系统零依赖安装
 #================================================================
 
 # 颜色定义
@@ -19,22 +19,24 @@ CONFIG_DIR="/etc/openlxd"
 BIN_PATH="/usr/local/bin/openlxd"
 SERVICE_FILE="/etc/systemd/system/openlxd.service"
 LOG_FILE="/var/log/openlxd-install.log"
+GITHUB_REPO="areyouokbro/openlxd"
+DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/openlxd-linux-amd64"
 
 # 打印带颜色的消息
 print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1" | tee -a "$LOG_FILE"
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
 print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1" | tee -a "$LOG_FILE"
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1" | tee -a "$LOG_FILE"
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1" | tee -a "$LOG_FILE"
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
 # 显示横幅
@@ -51,18 +53,9 @@ show_banner() {
     
 OpenLXD Backend - 开源 LXD 容器管理后端
 版本: 2.0 | 完全开源 | 生产级
+
 EOF
     echo -e "${NC}"
-    echo ""
-}
-
-# 检查 root 权限
-check_root() {
-    if [[ $EUID -ne 0 ]]; then
-        print_error "此脚本必须以 root 权限运行"
-        echo "请使用: sudo $0"
-        exit 1
-    fi
 }
 
 # 检测操作系统
@@ -70,234 +63,153 @@ detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         OS=$ID
-        VER=$VERSION_ID
+        OS_VERSION=$VERSION_ID
+    elif [ -f /etc/redhat-release ]; then
+        OS="centos"
     else
-        print_error "无法检测操作系统"
-        exit 1
+        OS="unknown"
     fi
     
-    print_info "检测到操作系统: $OS $VER"
+    print_info "检测到操作系统: $OS $OS_VERSION"
 }
 
-# 检查系统要求
-check_requirements() {
-    print_info "检查系统要求..."
-    
-    # 检查内存
-    total_mem=$(free -m | awk '/^Mem:/{print $2}')
-    if [ "$total_mem" -lt 1024 ]; then
-        print_warning "内存不足 1GB，可能影响性能"
-    fi
-    
-    # 检查磁盘空间
-    available_space=$(df -m / | awk 'NR==2 {print $4}')
-    if [ "$available_space" -lt 1024 ]; then
-        print_error "磁盘空间不足 1GB"
+# 检查是否为 root 用户
+check_root() {
+    if [ "$EUID" -ne 0 ]; then
+        print_error "请使用 root 用户或 sudo 运行此脚本"
         exit 1
     fi
-    
-    print_success "系统要求检查通过"
 }
 
-# 安装依赖
+# 安装基础依赖
 install_dependencies() {
     print_info "安装系统依赖..."
     
     case $OS in
         ubuntu|debian)
-            apt-get update -qq
-            apt-get install -y curl wget tar gzip unzip iptables sqlite3 net-tools file >> "$LOG_FILE" 2>&1
+            # 更新软件源（静默处理错误）
+            apt-get update -qq 2>/dev/null || true
+            
+            # 安装必要工具
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+                wget \
+                curl \
+                ca-certificates \
+                file \
+                >/dev/null 2>&1
             ;;
-        centos|rhel|rocky)
-            yum install -y curl wget tar gzip unzip iptables sqlite net-tools file >> "$LOG_FILE" 2>&1
+        centos|rhel|rocky|almalinux)
+            yum install -y -q \
+                wget \
+                curl \
+                ca-certificates \
+                file \
+                >/dev/null 2>&1
             ;;
         *)
-            print_warning "未知的操作系统，跳过依赖安装"
+            print_warning "未知的操作系统，尝试继续..."
             ;;
     esac
     
     print_success "依赖安装完成"
 }
 
-# 选择安装方式
-select_install_method() {
-    echo ""
-    echo "请选择安装方式:"
-    echo "1) 使用预编译二进制文件（推荐，快速）"
-    echo "2) 从源码编译（需要 Go 环境）"
-    echo "3) 从 GitHub 下载最新版本"
-    echo ""
-    read -p "请输入选项 [1-3]: " choice
-    
-    case $choice in
-        1) install_from_binary ;;
-        2) install_from_source ;;
-        3) install_from_github ;;
-        *) print_error "无效的选项"; exit 1 ;;
-    esac
-}
-
-# 从二进制文件安装
-install_from_binary() {
-    print_info "从预编译二进制文件安装..."
-    
-    # 检查是否存在二进制文件
-    if [ -f "./bin/openlxd-linux-amd64" ]; then
-        cp ./bin/openlxd-linux-amd64 "$BIN_PATH"
-        chmod +x "$BIN_PATH"
-        print_success "二进制文件安装完成"
+# 生成随机 API Key
+generate_api_key() {
+    if command -v openssl &> /dev/null; then
+        openssl rand -hex 32
     else
-        print_error "未找到预编译二进制文件"
-        print_info "尝试从 GitHub 下载..."
-        install_from_github
+        # 如果没有 openssl，使用 /dev/urandom
+        cat /dev/urandom | tr -dc 'a-f0-9' | fold -w 64 | head -n 1
     fi
 }
 
-# 从源码编译安装
-install_from_source() {
-    print_info "从源码编译安装..."
-    
-    # 检查 Go 是否已安装
-    if ! command -v go &> /dev/null; then
-        print_info "未检测到 Go 环境，正在安装..."
-        install_golang
-    fi
-    
-    # 编译
-    print_info "开始编译..."
-    cd "$(dirname "$0")/.."
-    CGO_ENABLED=1 go build -o "$BIN_PATH" cmd/main.go >> "$LOG_FILE" 2>&1
-    
-    if [ $? -eq 0 ]; then
-        chmod +x "$BIN_PATH"
-        print_success "编译完成"
-    else
-        print_error "编译失败，请查看日志: $LOG_FILE"
-        exit 1
-    fi
-}
-
-# 安装 Go 环境
-install_golang() {
-    GO_VERSION="1.22.0"
-    GO_URL="https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
-    
-    print_info "下载 Go ${GO_VERSION}..."
-    wget -q --show-progress "$GO_URL" -O /tmp/go.tar.gz
-    
-    print_info "安装 Go..."
-    rm -rf /usr/local/go
-    tar -C /usr/local -xzf /tmp/go.tar.gz
-    rm /tmp/go.tar.gz
-    
-    # 添加到 PATH
-    if ! grep -q "/usr/local/go/bin" /etc/profile; then
-        echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
-    fi
-    
-    export PATH=$PATH:/usr/local/go/bin
-    
-    print_success "Go 安装完成"
-}
-
-# 从 GitHub 下载
-install_from_github() {
+# 下载二进制文件
+download_binary() {
     print_info "从 GitHub 下载最新版本..."
-    
-    GITHUB_REPO="areyouokbro/openlxd"
-    DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/openlxd-linux-amd64"
-    
     print_info "下载地址: $DOWNLOAD_URL"
     print_info "文件大小: ~16MB，请耐心等待..."
     
-    # 创建临时文件
+    # 创建临时下载目录
     TMP_FILE="/tmp/openlxd-download-$$"
     
-    # 使用 wget 下载，添加超时和重试
-    if wget --timeout=60 --tries=3 --show-progress --progress=bar:force "$DOWNLOAD_URL" -O "$TMP_FILE" 2>&1 | tee -a "$LOG_FILE"; then
-        # 验证下载的文件
-        if [ -f "$TMP_FILE" ] && [ -s "$TMP_FILE" ]; then
-            # 检查文件大小（应该大于 10MB）
-            FILE_SIZE=$(stat -c%s "$TMP_FILE" 2>/dev/null || stat -f%z "$TMP_FILE" 2>/dev/null || echo "0")
-            if [ "$FILE_SIZE" -lt 10000000 ]; then
-                print_error "下载的文件大小不正确 ($FILE_SIZE bytes)"
-                rm -f "$TMP_FILE"
-                exit 1
-            fi
-            
-            # 检查文件是否为 ELF 可执行文件
-            if command -v file &> /dev/null; then
-                if ! file "$TMP_FILE" | grep -q "ELF"; then
-                    print_error "下载的文件不是有效的可执行文件"
-                    rm -f "$TMP_FILE"
-                    exit 1
-                fi
-            else
-                # 如果没有 file 命令，检查 ELF 魔数
-                if ! head -c 4 "$TMP_FILE" | grep -q "^\x7fELF"; then
-                    print_error "下载的文件不是有效的可执行文件"
-                    rm -f "$TMP_FILE"
-                    exit 1
-                fi
-            fi
-            
-            mv "$TMP_FILE" "$BIN_PATH"
-            chmod +x "$BIN_PATH"
-            print_success "下载完成"
-        else
-            print_error "下载的文件为空或不存在"
-            rm -f "$TMP_FILE"
-            exit 1
-        fi
+    # 使用 wget 下载（带进度条和重试）
+    if command -v wget &> /dev/null; then
+        wget --timeout=60 \
+             --tries=3 \
+             --show-progress \
+             --progress=bar:force \
+             -O "$TMP_FILE" \
+             "$DOWNLOAD_URL" 2>&1 | grep -v "^$"
+    elif command -v curl &> /dev/null; then
+        curl -L --max-time 60 \
+             --retry 3 \
+             --progress-bar \
+             -o "$TMP_FILE" \
+             "$DOWNLOAD_URL"
     else
-        print_error "下载失败，请检查网络连接"
-        print_info ""
-        print_info "手动下载步骤:"
-        print_info "1. 访问: $DOWNLOAD_URL"
-        print_info "2. 下载文件到服务器"
-        print_info "3. 执行: mv openlxd-linux-amd64 $BIN_PATH && chmod +x $BIN_PATH"
-        print_info "4. 重新运行安装脚本，选择选项1（从预编译二进制文件安装）"
+        print_error "未找到 wget 或 curl，无法下载文件"
+        print_info "请手动安装: apt-get install wget 或 yum install wget"
+        exit 1
+    fi
+    
+    # 检查下载是否成功
+    if [ ! -f "$TMP_FILE" ]; then
+        print_error "下载失败"
+        exit 1
+    fi
+    
+    # 检查文件大小
+    FILE_SIZE=$(stat -c%s "$TMP_FILE" 2>/dev/null || stat -f%z "$TMP_FILE" 2>/dev/null || echo "0")
+    if [ "$FILE_SIZE" -lt 10000000 ]; then
+        print_error "下载的文件大小不正确 ($FILE_SIZE bytes)"
         rm -f "$TMP_FILE"
         exit 1
     fi
+    
+    print_success "下载完成"
+    
+    # 移动到目标位置
+    mv "$TMP_FILE" "$BIN_PATH"
+    chmod +x "$BIN_PATH"
 }
 
-# 配置安装目录
-setup_directories() {
+# 创建安装目录
+create_directories() {
     print_info "创建安装目录..."
     
     mkdir -p "$INSTALL_DIR"
     mkdir -p "$CONFIG_DIR"
-    mkdir -p /var/log/openlxd
+    mkdir -p "/var/log/openlxd"
     
     print_success "目录创建完成"
 }
 
-# 配置文件
-setup_config() {
+# 创建配置文件
+create_config() {
     print_info "配置 OpenLXD..."
     
-    # 生成随机 API Key
-    API_KEY=$(openssl rand -hex 32 2>/dev/null || cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)
+    # 生成 API Key
+    API_KEY=$(generate_api_key)
+    
+    # 获取服务器 IP
+    SERVER_IP=$(hostname -I | awk '{print $1}')
     
     # 创建配置文件
-    cat > "$CONFIG_DIR/config.yaml" <<EOF
-# OpenLXD Backend 配置文件
-# 自动生成于: $(date)
-
+    cat > "$CONFIG_DIR/config.yaml" << EOF
 server:
   port: 8443
   host: "0.0.0.0"
 
 security:
-  api_hash: "${API_KEY}"
+  api_hash: "$API_KEY"
   admin_user: "admin"
   admin_pass: "admin123"
-  session_secret: "$(openssl rand -hex 16 2>/dev/null || cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)"
+  session_secret: "$(generate_api_key)"
 
 database:
   type: "sqlite"
-  path: "${INSTALL_DIR}/lxdapi.db"
+  path: "$INSTALL_DIR/lxdapi.db"
 
 lxd:
   socket: "/var/snap/lxd/common/lxd/unix.socket"
@@ -310,43 +222,33 @@ monitor:
 EOF
     
     print_success "配置文件创建完成"
-    print_warning "API Key: ${API_KEY}"
+    print_warning "API Key: $API_KEY"
     print_warning "请妥善保管此密钥！"
-    
-    # 保存密钥到文件
-    echo "$API_KEY" > "$CONFIG_DIR/.api_key"
-    chmod 600 "$CONFIG_DIR/.api_key"
 }
 
 # 配置 systemd 服务
 setup_systemd() {
     print_info "配置 systemd 服务..."
     
-    cat > "$SERVICE_FILE" <<EOF
+    cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=OpenLXD Backend Service
-Documentation=https://github.com/yourusername/openlxd-backend
-After=network.target lxd.service
-Wants=lxd.service
+After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=${INSTALL_DIR}
-ExecStart=${BIN_PATH}
+ExecStart=$BIN_PATH
 Restart=on-failure
 RestartSec=5s
-StandardOutput=journal
-StandardError=journal
-
-Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-Environment="CONFIG_PATH=${CONFIG_DIR}/config.yaml"
 
 [Install]
 WantedBy=multi-user.target
 EOF
     
     systemctl daemon-reload
+    systemctl enable openlxd >/dev/null 2>&1
+    
     print_success "systemd 服务配置完成"
 }
 
@@ -354,14 +256,19 @@ EOF
 setup_firewall() {
     print_info "配置防火墙..."
     
-    # 检查防火墙类型
+    # UFW
     if command -v ufw &> /dev/null; then
-        ufw allow 8443/tcp >> "$LOG_FILE" 2>&1
+        ufw allow 8443/tcp >/dev/null 2>&1
         print_success "UFW 防火墙规则已添加"
+    # firewalld
     elif command -v firewall-cmd &> /dev/null; then
-        firewall-cmd --permanent --add-port=8443/tcp >> "$LOG_FILE" 2>&1
-        firewall-cmd --reload >> "$LOG_FILE" 2>&1
+        firewall-cmd --permanent --add-port=8443/tcp >/dev/null 2>&1
+        firewall-cmd --reload >/dev/null 2>&1
         print_success "firewalld 防火墙规则已添加"
+    # iptables
+    elif command -v iptables &> /dev/null; then
+        iptables -A INPUT -p tcp --dport 8443 -j ACCEPT >/dev/null 2>&1
+        print_success "iptables 防火墙规则已添加"
     else
         print_warning "未检测到防火墙，请手动开放 8443 端口"
     fi
@@ -371,16 +278,18 @@ setup_firewall() {
 start_service() {
     print_info "启动 OpenLXD 服务..."
     
-    systemctl enable openlxd >> "$LOG_FILE" 2>&1
     systemctl start openlxd
     
+    # 等待服务启动
     sleep 3
     
+    # 检查服务状态
     if systemctl is-active --quiet openlxd; then
         print_success "服务启动成功"
+        return 0
     else
         print_error "服务启动失败，请查看日志: journalctl -u openlxd -n 50"
-        exit 1
+        return 1
     fi
 }
 
@@ -388,82 +297,125 @@ start_service() {
 verify_installation() {
     print_info "验证安装..."
     
-    API_KEY=$(cat "$CONFIG_DIR/.api_key")
+    # 检查二进制文件
+    if [ ! -f "$BIN_PATH" ]; then
+        print_error "二进制文件不存在"
+        return 1
+    fi
+    
+    # 检查配置文件
+    if [ ! -f "$CONFIG_DIR/config.yaml" ]; then
+        print_error "配置文件不存在"
+        return 1
+    fi
+    
+    # 检查服务状态
+    if ! systemctl is-active --quiet openlxd; then
+        print_warning "服务未运行"
+        return 1
+    fi
     
     # 测试 API
-    response=$(curl -s -H "X-API-Hash: $API_KEY" http://localhost:8443/api/system/stats 2>/dev/null || echo "error")
-    
-    if echo "$response" | grep -q "code"; then
-        print_success "API 测试通过"
-    else
-        print_warning "API 测试失败，但服务可能仍在启动中"
+    API_KEY=$(grep "api_hash:" "$CONFIG_DIR/config.yaml" | awk '{print $2}' | tr -d '"')
+    if command -v curl &> /dev/null; then
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "X-API-Hash: $API_KEY" \
+            http://localhost:8443/api/system/stats)
+        
+        if [ "$HTTP_CODE" = "200" ]; then
+            print_success "API 测试通过"
+        else
+            print_warning "API 测试失败 (HTTP $HTTP_CODE)"
+        fi
     fi
+    
+    return 0
 }
 
 # 显示安装信息
 show_install_info() {
-    API_KEY=$(cat "$CONFIG_DIR/.api_key")
     SERVER_IP=$(hostname -I | awk '{print $1}')
+    API_KEY=$(grep "api_hash:" "$CONFIG_DIR/config.yaml" | awk '{print $2}' | tr -d '"')
     
     echo ""
-    echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}   OpenLXD 安装完成！${NC}"
-    echo -e "${GREEN}========================================${NC}"
+    echo "========================================"
+    echo "   OpenLXD 安装完成！"
+    echo "========================================"
     echo ""
-    echo -e "${BLUE}安装信息:${NC}"
+    echo "安装信息:"
     echo "  安装目录: $INSTALL_DIR"
     echo "  配置目录: $CONFIG_DIR"
     echo "  二进制文件: $BIN_PATH"
     echo "  日志文件: /var/log/openlxd/"
     echo ""
-    echo -e "${BLUE}API 信息:${NC}"
+    echo "API 信息:"
     echo "  API Key: $API_KEY"
-    echo "  API 地址: http://${SERVER_IP}:8443"
-    echo "  Web 管理: http://${SERVER_IP}:8443"
+    echo "  API 地址: http://$SERVER_IP:8443"
+    echo "  Web 管理: http://$SERVER_IP:8443/admin/login"
     echo ""
-    echo -e "${BLUE}服务管理:${NC}"
+    echo "Web 登录凭据:"
+    echo "  用户名: admin"
+    echo "  密码: admin123"
+    echo ""
+    echo "服务管理:"
     echo "  启动服务: systemctl start openlxd"
     echo "  停止服务: systemctl stop openlxd"
     echo "  重启服务: systemctl restart openlxd"
     echo "  查看状态: systemctl status openlxd"
     echo "  查看日志: journalctl -u openlxd -f"
     echo ""
-    echo -e "${BLUE}管理工具:${NC}"
-    echo "  管理脚本: openlxd-cli"
-    echo "  配置文件: $CONFIG_DIR/config.yaml"
-    echo ""
-    echo -e "${YELLOW}重要提示:${NC}"
+    echo "重要提示:"
     echo "  1. 请妥善保管 API Key"
     echo "  2. 建议修改默认管理员密码"
     echo "  3. 如需集成财务系统，请使用上述 API Key"
     echo ""
-    echo -e "${GREEN}========================================${NC}"
+    echo "========================================"
     echo ""
 }
 
 # 主函数
 main() {
     show_banner
+    
+    # 检查 root 权限
     check_root
+    
+    # 检测操作系统
     detect_os
-    check_requirements
     
-    print_info "开始安装 OpenLXD Backend..."
-    echo ""
-    
+    # 安装依赖
     install_dependencies
-    select_install_method
-    setup_directories
-    setup_config
+    
+    # 下载二进制文件
+    download_binary
+    
+    # 创建目录
+    create_directories
+    
+    # 创建配置
+    create_config
+    
+    # 配置 systemd
     setup_systemd
+    
+    # 配置防火墙
     setup_firewall
-    start_service
-    verify_installation
     
-    show_install_info
-    
-    print_success "安装完成！"
+    # 启动服务
+    if start_service; then
+        # 验证安装
+        verify_installation
+        
+        # 显示安装信息
+        show_install_info
+        
+        print_success "安装完成！"
+    else
+        print_error "安装过程中出现错误"
+        print_info "请查看日志: journalctl -u openlxd -n 50"
+        exit 1
+    fi
 }
 
-# 执行主函数
-main "$@"
+# 运行主函数
+main

@@ -37,22 +37,29 @@ OpenLXD 是一个生产级的 LXD 容器管理系统，提供完整的 RESTful A
 
 ### 方式一：一键安装（推荐）
 
-```bash
-# 下载项目
-git clone https://github.com/areyouokbro/openlxd.git
-cd openlxd
+**纯净系统零依赖安装**，只需一条命令：
 
-# 运行安装脚本
-sudo bash scripts/install.sh
+```bash
+curl -fsSL https://raw.githubusercontent.com/areyouokbro/openlxd/master/scripts/install.sh | sudo bash
+```
+
+或者使用 wget：
+
+```bash
+wget -qO- https://raw.githubusercontent.com/areyouokbro/openlxd/master/scripts/install.sh | sudo bash
 ```
 
 安装脚本会自动：
-1. 检测系统环境
-2. 安装必要依赖
-3. 部署后端服务
-4. 配置 systemd 服务
-5. 生成 API Key
-6. 启动服务
+1. 检测系统环境（支持 Ubuntu/Debian/CentOS/Rocky）
+2. 安装必要依赖（wget/curl/ca-certificates）
+3. 下载最新版本二进制文件
+4. 创建配置文件和目录
+5. 配置 systemd 服务
+6. 生成安全的 API Key
+7. 配置防火墙规则
+8. 启动并验证服务
+
+安装完成后，直接访问：`http://你的服务器IP:8443/admin/login`
 
 ### 方式二：使用预编译二进制
 
