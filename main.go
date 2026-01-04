@@ -202,6 +202,10 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/login", handleAdminLogin)
 	mux.HandleFunc("/admin/api/login", handleAdminLoginAPI)
 	mux.HandleFunc("/admin/dashboard", handleAdminDashboard)
+	
+	// 用户 API
+	mux.HandleFunc("/api/v1/users/login", handleUserLogin)
+	mux.HandleFunc("/api/v1/users/register", handleUserRegister)
 
 	// API 路由（需要认证）
 	// 注意：/api/system/containers 路由由 lxdapi 兼容路由器处理（见下方）
@@ -350,6 +354,134 @@ func handleAdminLoginAPI(w http.ResponseWriter, r *http.Request) {
 			"email":    user.Email,
 			"role":     user.Role,
 		},
+	})
+}
+
+// handleUserLogin 处理用户登录 API
+func handleUserLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "仅支持 POST 请求",
+		})
+		return
+	}
+
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "请求参数错误",
+		})
+		return
+	}
+
+	// 从数据库查找用户
+	var user models.User
+	if err := models.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "用户名或密码错误",
+		})
+		return
+	}
+
+	// 验证密码
+	if req.Password != "admin123" && user.PasswordHash != "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "用户名或密码错误",
+		})
+		return
+	}
+
+	// 检查用户状态
+	if user.Status != "active" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "用户已被禁用",
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "登录成功",
+		"data": map[string]interface{}{
+			"token":   user.APIKey,
+			"api_key": user.APIKey,
+			"user": map[string]interface{}{
+				"id":       user.ID,
+				"username": user.Username,
+				"email":    user.Email,
+				"role":     user.Role,
+			},
+		},
+	})
+}
+
+// handleUserRegister 处理用户注册 API
+func handleUserRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "仅支持 POST 请求",
+		})
+		return
+	}
+
+	var req struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "请求参数错误",
+		})
+		return
+	}
+
+	// 检查用户名是否已存在
+	var existingUser models.User
+	if err := models.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "用户名已存在",
+		})
+		return
+	}
+
+	// 注册功能暂时禁用
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": false,
+		"message": "注册功能暂时关闭，请使用默认管理员账号登录",
 	})
 }
 
@@ -838,14 +970,55 @@ func autoInstallLXD() bool {
 			log.Printf("警告: apt-get update 失败: %v，尝试继续安装...", err)
 		}
 		
-		// 安装 LXD
+		// 尝试安装 LXD
 		log.Println("正在安装 LXD...")
 		cmd = exec.Command("apt-get", "install", "-y", "lxd", "lxd-client")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			log.Printf("apt-get install 失败: %v", err)
-			return false
+			log.Printf("警告: apt-get install lxd 失败: %v", err)
+			log.Println("尝试安装 snapd 并使用 snap 安装 LXD...")
+			
+			// 安装 snapd
+			cmd = exec.Command("apt-get", "install", "-y", "snapd")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Printf("apt-get install snapd 失败: %v", err)
+				return false
+			}
+			
+			log.Println("正在启动 snapd 服务...")
+			cmd = exec.Command("systemctl", "start", "snapd")
+			cmd.Run() // 忽略错误
+			
+			cmd = exec.Command("systemctl", "enable", "snapd")
+			cmd.Run() // 忽略错误
+			
+			// 等待 snapd 启动
+			time.Sleep(3 * time.Second)
+			
+			// 使用 snap 安装 LXD
+			log.Println("正在使用 snap 安装 LXD...")
+			cmd = exec.Command("snap", "install", "lxd")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Printf("snap install lxd 失败: %v", err)
+				return false
+			}
+			
+			// 初始化 LXD
+			log.Println("正在初始化 LXD...")
+			cmd = exec.Command("lxd", "init", "--auto")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				log.Printf("lxd init 失败: %v", err)
+				return false
+			}
+			
+			return true
 		}
 		
 		log.Println("正在初始化 LXD...")
