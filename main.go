@@ -26,6 +26,7 @@ import (
 	"github.com/openlxd/backend/internal/config"
 	"github.com/openlxd/backend/internal/lxd"
 	"github.com/openlxd/backend/internal/models"
+	"github.com/openlxd/backend/internal/monitor"
 )
 
 //go:embed web
@@ -68,7 +69,11 @@ func main() {
 		log.Printf("警告: 容器同步失败: %v", err)
 	}
 
-	// 5. 设置 HTTP 路由
+	// 5. 启动监控数据采集器（每5分钟采集一次）
+	monitor.GlobalCollector.StartCollector(5 * time.Minute)
+	log.Println("监控数据采集器已启动")
+
+	// 6. 设置 HTTP 路由
 	mux := http.NewServeMux()
 	setupRoutes(mux)
 
@@ -155,6 +160,14 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/quota/usage", authMiddleware(api.HandleQuotaUsage))
 	mux.HandleFunc("/api/quota/stats", authMiddleware(api.HandleQuotaStats))
 	mux.HandleFunc("/api/quota/reset-traffic", authMiddleware(api.HandleResetTraffic))
+	
+	// 监控管理
+	mux.HandleFunc("/api/monitor/system", authMiddleware(api.HandleSystemMetrics))
+	mux.HandleFunc("/api/monitor/system/current", authMiddleware(api.HandleCurrentSystemMetrics))
+	mux.HandleFunc("/api/monitor/containers", authMiddleware(api.HandleContainerMetrics))
+	mux.HandleFunc("/api/monitor/traffic", authMiddleware(api.HandleNetworkTraffic))
+	mux.HandleFunc("/api/monitor/stats", authMiddleware(api.HandleResourceStats))
+	mux.HandleFunc("/api/monitor/dashboard", authMiddleware(api.HandleMonitorDashboard))
 }
 
 // authMiddleware 认证中间件

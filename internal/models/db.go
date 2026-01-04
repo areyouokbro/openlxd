@@ -30,6 +30,9 @@ func InitDB(dbPath string) error {
 		&PortMapping{},
 		&ProxyConfig{},
 		&Quota{},
+		&SystemMetric{},
+		&ContainerMetric{},
+		&NetworkTraffic{},
 	)
 	if err != nil {
 		return fmt.Errorf("数据库迁移失败: %v", err)

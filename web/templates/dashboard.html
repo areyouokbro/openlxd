@@ -334,6 +334,7 @@
     <div class="tabs">
         <div class="tab-buttons">
             <button class="tab-button active" onclick="switchTab('containers')">🖥️ 容器管理</button>
+            <button class="tab-button" onclick="switchTab('monitor')">📈 实时监控</button>
             <button class="tab-button" onclick="switchTab('ippool')">📍 IP地址池</button>
             <button class="tab-button" onclick="switchTab('portmapping')">🔀 端口映射</button>
             <button class="tab-button" onclick="switchTab('proxy')">🌐 反向代理</button>
@@ -344,6 +345,53 @@
     
     <div class="container">
         <div id="alert-container"></div>
+        
+        <!-- 实时监控标签页 -->
+        <div id="tab-monitor" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>CPU 使用率</h3>
+                    <div class="value" id="monitor-cpu">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>内存使用率</h3>
+                    <div class="value" id="monitor-memory">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>磁盘使用率</h3>
+                    <div class="value" id="monitor-disk">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>系统负载</h3>
+                    <div class="value" id="monitor-load">-</div>
+                </div>
+            </div>
+            
+            <div class="actions-bar">
+                <div class="actions-left">
+                    <button class="btn btn-secondary" onclick="loadMonitorData()">🔄 刷新</button>
+                </div>
+            </div>
+            
+            <div class="data-table">
+                <h3>容器资源使用统计</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>容器名称</th>
+                            <th>CPU平均/最大</th>
+                            <th>内存平均/最大</th>
+                            <th>磁盘平均/最大</th>
+                            <th>网络流量(RX/TX)</th>
+                            <th>资源使用</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monitor-tbody">
+                        <tr><td colspan="6" class="loading">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         
         <!-- 容器管理标签页 -->
         <div id="tab-containers" class="tab-content active">
@@ -636,5 +684,6 @@
     <script src="/static/dashboard.js"></script>
     <script src="/static/network.js"></script>
     <script src="/static/quota.js"></script>
+    <script src="/static/monitor.js"></script>
 </body>
 </html>

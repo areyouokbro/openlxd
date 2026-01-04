@@ -69,6 +69,9 @@ function switchTab(tabName) {
         case 'proxy':
             loadProxies();
             break;
+        case 'monitor':
+            loadMonitorData();
+            break;
         case 'quota':
             loadQuotas();
             break;
