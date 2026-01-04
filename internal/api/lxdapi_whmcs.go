@@ -279,6 +279,49 @@ func (h *LXDAPIHandler) DeleteContainer(w http.ResponseWriter, r *http.Request) 
 	RespondLXDAPISuccess(w, nil, "删除容器成功")
 }
 
+// ListContainers 获取容器列表
+func (h *LXDAPIHandler) ListContainers(w http.ResponseWriter, r *http.Request) {
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		RespondLXDAPIError(w, "未授权", http.StatusUnauthorized)
+		return
+	}
+
+	// 获取用户的所有容器
+	var containers []models.Container
+	if err := h.db.Where("user_id = ?", user.ID).Find(&containers).Error; err != nil {
+		RespondLXDAPIError(w, fmt.Sprintf("获取容器列表失败: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// 获取LXD客户端
+	client := lxd.GetClient()
+	if client == nil {
+		// LXD未连接，返回数据库中的数据
+		RespondLXDAPISuccess(w, containers, "获取成功")
+		return
+	}
+
+	// 更新容器状态
+	for i := range containers {
+		state, _, err := client.GetInstanceState(containers[i].Hostname)
+		if err == nil {
+			containers[i].Status = state.Status
+			if state.Network != nil {
+				for _, addr := range state.Network["eth0"].Addresses {
+					if addr.Family == "inet" {
+						containers[i].IPv4 = addr.Address
+					} else if addr.Family == "inet6" && addr.Scope == "global" {
+						containers[i].IPv6 = addr.Address
+					}
+				}
+			}
+		}
+	}
+
+	RespondLXDAPISuccess(w, containers, "获取成功")
+}
+
 // GetContainerInfo 获取容器信息
 func (h *LXDAPIHandler) GetContainerInfo(w http.ResponseWriter, r *http.Request) {
 	user := auth.GetUserFromContext(r.Context())

@@ -63,6 +63,8 @@ func (router *LXDAPIRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path = strings.TrimPrefix(path, "/api/system")
 	
 	switch {
+	case path == "/containers" && method == "GET":
+		router.handler.ListContainers(w, r)
 	case path == "/containers" && method == "POST":
 		router.handler.CreateContainer(w, r)
 	case strings.HasPrefix(path, "/containers/") && strings.HasSuffix(path, "/start") && method == "POST":
