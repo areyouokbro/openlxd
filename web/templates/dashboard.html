@@ -500,6 +500,186 @@
                 font-size: 24px;
             }
         }
+        
+        /* 日志和详情样式 */
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .log-entry {
+            padding: 5px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 5px;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-time {
+            color: var(--text-secondary);
+            margin-right: 10px;
+        }
+        
+        .log-level {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .log-level.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .log-level.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .log-level.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .detail-item {
+            padding: 10px;
+            background: var(--bg-color);
+            border-radius: 4px;
+        }
+        
+        .detail-item strong {
+            color: var(--primary-color);
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+        }
+        
+        /* 终端样式 */
+        .terminal-container {
+            background: #1e1e1e;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .terminal-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .terminal-line {
+            margin: 2px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .terminal-command {
+            color: #4ec9b0;
+            font-weight: bold;
+        }
+        
+        .terminal-output {
+            color: #d4d4d4;
+        }
+        
+        .terminal-error {
+            color: #f48771;
+        }
+        
+        .terminal-success {
+            color: #89d185;
+        }
+        
+        .terminal-info {
+            color: #569cd6;
+        }
+        
+        .terminal-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .terminal-prompt {
+            color: #4ec9b0;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .terminal-input {
+            flex: 1;
+            background: #2d2d2d;
+            color: #d4d4d4;
+            border: 1px solid #3c3c3c;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .terminal-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .terminal-quick-commands {
+            margin: 15px 0;
+        }
+        
+        .terminal-quick-commands h4 {
+            margin-bottom: 10px;
+            color: var(--text-color);
+        }
+        
+        .terminal-quick-commands .btn {
+            margin: 5px;
+        }
+        
+        .terminal-tips {
+            background: var(--bg-color);
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        
+        .terminal-tips ul {
+            margin: 10px 0 0 20px;
+        }
+        
+        .terminal-tips li {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -523,6 +703,9 @@
             <button class="tab-button" onclick="switchTab('proxy')">🌐 反向代理</button>
             <button class="tab-button" onclick="switchTab('quota')">📊 配额管理</button>
             <button class="tab-button" onclick="switchTab('migration')">🚀 容器迁移</button>
+            <button class="tab-button" onclick="switchTab('logs')">📋 日志查看</button>
+            <button class="tab-button" onclick="switchTab('detail')">📊 容器详情</button>
+            <button class="tab-button" onclick="switchTab('terminal')">💻 终端控制台</button>
             <button class="tab-button" onclick="switchTab('images')">💿 镜像管理</button>
         </div>
     </div>
@@ -801,6 +984,147 @@
             </div>
         </div>
         
+        <!-- 日志查看标签页 -->
+        <div id="tab-logs" class="tab-content">
+            <h2>📋 日志查看</h2>
+            
+            <div class="card">
+                <h3>容器日志</h3>
+                <div class="form-group">
+                    <label>容器名称（留空查看所有）</label>
+                    <input type="text" id="log-container-filter" placeholder="输入容器名称">
+                    <button class="btn btn-primary" onclick="LogsManager.loadContainerLogs(document.getElementById('log-container-filter').value)">🔍 查询</button>
+                </div>
+                <div id="container-logs-list" class="log-container">
+                    <div class="empty-state">请点击查询按钮加载日志</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>系统日志</h3>
+                <div class="form-group">
+                    <label>日志级别</label>
+                    <select id="log-level-filter">
+                        <option value="">所有</option>
+                        <option value="success">成功</option>
+                        <option value="error">错误</option>
+                        <option value="warning">警告</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="LogsManager.loadSystemLogs(document.getElementById('log-level-filter').value)">🔍 查询</button>
+                </div>
+                <div id="system-logs-list" class="log-container">
+                    <div class="empty-state">请点击查询按钮加载日志</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 容器详情标签页 -->
+        <div id="tab-detail" class="tab-content">
+            <h2>📊 容器详情</h2>
+            
+            <div class="form-group">
+                <label>选择容器</label>
+                <select id="detail-container-select" onchange="ContainerDetailManager.showDetail(this.value)">
+                    <option value="">请选择容器</option>
+                </select>
+            </div>
+            
+            <div class="card">
+                <h3>基本信息</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><strong>容器名称：</strong><span id="detail-name">-</span></div>
+                    <div class="detail-item"><strong>状态：</strong><span id="detail-status">-</span></div>
+                    <div class="detail-item"><strong>镜像：</strong><span id="detail-image">-</span></div>
+                    <div class="detail-item"><strong>IPv4：</strong><span id="detail-ipv4">-</span></div>
+                    <div class="detail-item"><strong>IPv6：</strong><span id="detail-ipv6">-</span></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>资源配置</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><strong>CPU：</strong><span id="detail-cpu">-</span></div>
+                    <div class="detail-item"><strong>内存：</strong><span id="detail-memory">-</span></div>
+                    <div class="detail-item"><strong>磁盘：</strong><span id="detail-disk">-</span></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>配额信息</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><strong>IPv4配额：</strong><span id="detail-ipv4-quota">-</span></div>
+                    <div class="detail-item"><strong>端口映射配额：</strong><span id="detail-port-quota">-</span></div>
+                    <div class="detail-item"><strong>反向代理配额：</strong><span id="detail-proxy-quota">-</span></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>IP 地址列表</h3>
+                <div id="detail-ip-list"></div>
+            </div>
+            
+            <div class="card">
+                <h3>端口映射列表</h3>
+                <div id="detail-port-list"></div>
+            </div>
+            
+            <div class="card">
+                <h3>反向代理列表</h3>
+                <div id="detail-proxy-list"></div>
+            </div>
+            
+            <div class="card">
+                <h3>最近操作</h3>
+                <div id="detail-logs-list"></div>
+            </div>
+        </div>
+        
+        <!-- 终端控制台标签页 -->
+        <div id="tab-terminal" class="tab-content">
+            <h2>💻 终端控制台</h2>
+            
+            <div class="card">
+                <div class="form-group">
+                    <label>选择容器</label>
+                    <select id="terminal-container-select" onchange="TerminalManager.selectContainer(this.value)">
+                        <option value="">请选择容器</option>
+                    </select>
+                </div>
+                
+                <div class="terminal-container">
+                    <div id="terminal-output" class="terminal-output"></div>
+                    <div class="terminal-input-container">
+                        <span class="terminal-prompt">$</span>
+                        <input type="text" id="terminal-input" class="terminal-input" placeholder="输入命令..." autocomplete="off">
+                        <button class="btn btn-primary btn-sm" onclick="TerminalManager.executeCommand()">执行</button>
+                        <button class="btn btn-secondary btn-sm" onclick="TerminalManager.clearTerminal()">清屏</button>
+                    </div>
+                </div>
+                
+                <div class="terminal-quick-commands">
+                    <h4>快捷命令</h4>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('ls -la')">📁 ls -la</button>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('pwd')">📍 pwd</button>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('df -h')">💾 df -h</button>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('free -h')">📊 free -h</button>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('ps aux')">🔍 ps aux</button>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('ip addr')">🌐 ip addr</button>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('top -bn1')">📊 top</button>
+                    <button class="btn btn-sm" onclick="TerminalManager.quickCommand('uname -a')">ℹ️ uname -a</button>
+                </div>
+                
+                <div class="terminal-tips">
+                    <p><strong>提示：</strong></p>
+                    <ul>
+                        <li>使用 ↑↓ 键浏览历史命令</li>
+                        <li>按 Enter 键执行命令</li>
+                        <li>仅支持非交互式命令（如 ls、pwd、cat 等）</li>
+                        <li>不支持需要用户输入的交互式命令（如 vim、nano 等）</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
         <!-- 镜像管理标签页 -->
         <div id="tab-images" class="tab-content">
             <div class="actions-bar">
@@ -1047,5 +1371,7 @@
     <script src="/static/monitor.js"></script>
     <script src="/static/advanced.js"></script>
     <script src="/static/migration.js"></script>
+    <script src="/static/logs.js"></script>
+    <script src="/static/terminal.js"></script>
 </body>
 </html>

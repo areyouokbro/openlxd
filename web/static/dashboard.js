@@ -87,6 +87,21 @@ function switchTab(tabName) {
         case 'migration':
             initMigration();
             break;
+        case 'logs':
+            if (typeof LogsManager !== 'undefined') {
+                LogsManager.init();
+            }
+            break;
+        case 'detail':
+            if (typeof ContainerDetailManager !== 'undefined') {
+                ContainerDetailManager.init();
+            }
+            break;
+        case 'terminal':
+            if (typeof TerminalManager !== 'undefined') {
+                TerminalManager.init();
+            }
+            break;
         case 'images':
             loadImages();
             break;
