@@ -44,7 +44,7 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 	var err error
 
 	if strings.Contains(req.Image, ":") {
-		// 格式: server:image (例如: images:alpine/3.19)
+		// 格式: server:image (例如: images:alpine/edge)
 		parts := strings.SplitN(req.Image, ":", 2)
 		serverName := parts[0]
 		imageAlias = parts[1]
@@ -80,18 +80,33 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 	instanceReq := api.InstancesPost{
 		Name: req.Hostname,
 		Type: api.InstanceTypeContainer,
-		Source: api.InstanceSource{
-			Type:        "image",
-			Fingerprint: image.Target,
-		},
 		InstancePut: api.InstancePut{
 			Config:  config,
 			Devices: devices,
 		},
 	}
 
-	// 创建容器
-	op, err := Client.CreateInstance(instanceReq)
+	// 创建容器 - 使用CreateInstanceFromImage方法处理远程镜像
+	var op lxd.Operation
+	
+	if imageServer != Client {
+		// 远程镜像 - 使用CreateInstanceFromImage
+		imageCreateArgs := &lxd.InstanceCreateArgs{
+			Name: req.Hostname,
+			Type: api.InstanceTypeContainer,
+		}
+		
+		// 使用CopyImage方法从远程服务器复制镜像并创建容器
+		op, err = Client.CreateInstanceFromImage(imageServer, *image, instanceReq)
+	} else {
+		// 本地镜像 - 使用普通CreateInstance
+		instanceReq.Source = api.InstanceSource{
+			Type:        "image",
+			Fingerprint: image.Target,
+		}
+		op, err = Client.CreateInstance(instanceReq)
+	}
+	
 	if err != nil {
 		return fmt.Errorf("创建容器失败: %v", err)
 	}
