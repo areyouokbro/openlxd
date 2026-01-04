@@ -3,9 +3,7 @@ package lxd
 import (
 	"fmt"
 	"log"
-	"strings"
 
-	lxd "github.com/canonical/lxd/client"
 	"github.com/canonical/lxd/shared/api"
 )
 
@@ -38,75 +36,22 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 		},
 	}
 
-	// 解析镜像名称
-	var imageServer lxd.ImageServer
-	var imageAlias string
-	var err error
-
-	if strings.Contains(req.Image, ":") {
-		// 格式: server:image (例如: images:alpine/edge)
-		parts := strings.SplitN(req.Image, ":", 2)
-		serverName := parts[0]
-		imageAlias = parts[1]
-
-		// 连接到远程镜像服务器
-		switch serverName {
-		case "images":
-			imageServer, err = lxd.ConnectSimpleStreams("https://images.linuxcontainers.org", nil)
-		case "ubuntu":
-			imageServer, err = lxd.ConnectSimpleStreams("https://cloud-images.ubuntu.com/releases", nil)
-		case "ubuntu-daily":
-			imageServer, err = lxd.ConnectSimpleStreams("https://cloud-images.ubuntu.com/daily", nil)
-		default:
-			return fmt.Errorf("不支持的镜像服务器: %s", serverName)
-		}
-
-		if err != nil {
-			return fmt.Errorf("连接镜像服务器失败: %v", err)
-		}
-	} else {
-		// 使用本地镜像
-		imageServer = Client
-		imageAlias = req.Image
-	}
-
-	// 获取镜像信息
-	image, _, err := imageServer.GetImageAlias(imageAlias)
-	if err != nil {
-		return fmt.Errorf("获取镜像信息失败: %v (镜像: %s)", err, imageAlias)
-	}
-
 	// 创建容器请求
 	instanceReq := api.InstancesPost{
 		Name: req.Hostname,
 		Type: api.InstanceTypeContainer,
+		Source: api.InstanceSource{
+			Type:  "image",
+			Alias: req.Image,  // 直接使用镜像别名（例如: images:alpine/edge）
+		},
 		InstancePut: api.InstancePut{
 			Config:  config,
 			Devices: devices,
 		},
 	}
 
-	// 创建容器 - 使用CreateInstanceFromImage方法处理远程镜像
-	var op lxd.Operation
-	
-	if imageServer != Client {
-		// 远程镜像 - 使用CreateInstanceFromImage
-		imageCreateArgs := &lxd.InstanceCreateArgs{
-			Name: req.Hostname,
-			Type: api.InstanceTypeContainer,
-		}
-		
-		// 使用CopyImage方法从远程服务器复制镜像并创建容器
-		op, err = Client.CreateInstanceFromImage(imageServer, *image, instanceReq)
-	} else {
-		// 本地镜像 - 使用普通CreateInstance
-		instanceReq.Source = api.InstanceSource{
-			Type:        "image",
-			Fingerprint: image.Target,
-		}
-		op, err = Client.CreateInstance(instanceReq)
-	}
-	
+	// 创建容器
+	op, err := Client.CreateInstance(instanceReq)
 	if err != nil {
 		return fmt.Errorf("创建容器失败: %v", err)
 	}
