@@ -166,9 +166,7 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/dashboard", handleAdminDashboard)
 
 	// API 路由（需要认证）
-	// 容器管理
-	mux.HandleFunc("/api/system/containers", authMiddleware(handleContainers))
-	mux.HandleFunc("/api/system/containers/", authMiddleware(handleContainerOperations))
+	// 注意：/api/system/containers 路由由 lxdapi 兼容路由器处理（见下方）
 	mux.HandleFunc("/api/system/stats", authMiddleware(handleSystemStats))
 	mux.HandleFunc("/api/system/traffic/reset", authMiddleware(handleResetTraffic))
 	
