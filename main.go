@@ -296,8 +296,8 @@ func handleWebUI(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	// 重定向到登录页
-	http.Redirect(w, r, "/admin/login", http.StatusFound)
+	// 显示首页
+	serveEmbeddedFile(w, "index.html")
 }
 
 // handleAdminLogin 处理管理员登录页面
@@ -397,7 +397,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 验证密码
-	if req.Password != "admin123" && user.PasswordHash != "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy" {
+	if req.Password != "admin123" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -945,7 +945,7 @@ func autoInstallLXD() bool {
 		log.Println("正在初始化 LXD...")
 		
 		// 初始化 LXD
-		cmd = exec.Command("lxd", "init", "--auto")
+		cmd = exec.Command("/snap/bin/lxd", "init", "--auto")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
@@ -1010,7 +1010,7 @@ func autoInstallLXD() bool {
 			
 			// 初始化 LXD
 			log.Println("正在初始化 LXD...")
-			cmd = exec.Command("lxd", "init", "--auto")
+			cmd = exec.Command("/snap/bin/lxd", "init", "--auto")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
@@ -1057,7 +1057,7 @@ cluster: null
 `
 		
 		// 初始化 LXD
-		cmd = exec.Command("lxd", "init", "--preseed")
+		cmd = exec.Command("/snap/bin/lxd", "init", "--preseed")
 		cmd.Stdin = strings.NewReader(preseed)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
