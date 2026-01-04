@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	
 	"github.com/openlxd/backend/internal/lxd"
 	"github.com/openlxd/backend/internal/models"
+	"golang.org/x/crypto/acme/autocert"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,8 +22,12 @@ var webTemplates embed.FS
 
 type Config struct {
 	Server struct {
-		Port int    `yaml:"port"`
-		Host string `yaml:"host"`
+		Port       int    `yaml:"port"`
+		Host       string `yaml:"host"`
+		HTTPS      bool   `yaml:"https"`
+		Domain     string `yaml:"domain"`
+		CertDir    string `yaml:"cert_dir"`
+		AutoTLS    bool   `yaml:"auto_tls"`
 	} `yaml:"server"`
 	Security struct {
 		APIHash       string `yaml:"api_hash"`
@@ -423,7 +429,76 @@ func main() {
 	http.HandleFunc("/api/system/console/create-token", authMiddleware(handleCreateConsoleToken))
 	http.HandleFunc("/api/system/stats", authMiddleware(handleSystemStats))
 	
+	// 启动服务器
+	if config.Server.HTTPS {
+		if config.Server.AutoTLS && config.Server.Domain != "" {
+			// 使用 Let's Encrypt 自动证书
+			startHTTPSWithAutoCert()
+		} else {
+			// 使用手动证书
+			startHTTPSWithManualCert()
+		}
+	} else {
+		// HTTP 模式
+		addr := fmt.Sprintf("%s:%d", config.Server.Host, config.Server.Port)
+		log.Printf("服务器监听 (HTTP): %s\n", addr)
+		log.Fatal(http.ListenAndServe(addr, nil))
+	}
+}
+
+// 使用 Let's Encrypt 自动证书启动 HTTPS
+func startHTTPSWithAutoCert() {
+	certDir := config.Server.CertDir
+	if certDir == "" {
+		certDir = "/etc/openlxd/certs"
+	}
+	
+	// 创建证书目录
+	os.MkdirAll(certDir, 0700)
+	
+	// 配置 autocert
+	certManager := autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(config.Server.Domain),
+		Cache:      autocert.DirCache(certDir),
+	}
+	
+	// HTTP 服务器（用于 ACME 验证）
+	go func() {
+		log.Printf("HTTP 服务器启动 (ACME 验证): :80")
+		http.ListenAndServe(":80", certManager.HTTPHandler(nil))
+	}()
+	
+	// HTTPS 服务器
+	server := &http.Server{
+		Addr: fmt.Sprintf("%s:%d", config.Server.Host, config.Server.Port),
+		TLSConfig: &tls.Config{
+			GetCertificate: certManager.GetCertificate,
+			MinVersion:     tls.VersionTLS12,
+		},
+	}
+	
+	log.Printf("服务器监听 (HTTPS): %s", server.Addr)
+	log.Printf("域名: %s", config.Server.Domain)
+	log.Printf("证书目录: %s", certDir)
+	log.Fatal(server.ListenAndServeTLS("", ""))
+}
+
+// 使用手动证书启动 HTTPS
+func startHTTPSWithManualCert() {
+	certFile := config.Server.CertDir + "/cert.pem"
+	keyFile := config.Server.CertDir + "/key.pem"
+	
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		log.Fatal("证书文件不存在: ", certFile)
+	}
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		log.Fatal("密钥文件不存在: ", keyFile)
+	}
+	
 	addr := fmt.Sprintf("%s:%d", config.Server.Host, config.Server.Port)
-	log.Printf("服务器监听: %s\n", addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	log.Printf("服务器监听 (HTTPS): %s\n", addr)
+	log.Printf("证书: %s", certFile)
+	log.Printf("密钥: %s", keyFile)
+	log.Fatal(http.ListenAndServeTLS(addr, certFile, keyFile, nil))
 }

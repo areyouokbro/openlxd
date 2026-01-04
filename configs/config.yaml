@@ -1,6 +1,10 @@
 server:
   port: 8443
   host: "0.0.0.0"
+  https: true                    # 启用 HTTPS
+  domain: "your-domain.com"      # 你的域名（用于 Let's Encrypt）
+  cert_dir: "/etc/openlxd/certs" # 证书存储目录
+  auto_tls: true                 # 自动申请 Let's Encrypt 证书
 
 security:
   api_hash: "test-api-key-12345"

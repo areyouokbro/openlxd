@@ -200,6 +200,10 @@ create_config() {
 server:
   port: 8443
   host: "0.0.0.0"
+  https: false                    # 默认使用 HTTP，如需 HTTPS 请改为 true
+  domain: ""                      # 你的域名（用于 Let's Encrypt）
+  cert_dir: "/etc/openlxd/certs" # 证书存储目录
+  auto_tls: false                 # 自动申请 Let's Encrypt 证书
 
 security:
   api_hash: "$API_KEY"
