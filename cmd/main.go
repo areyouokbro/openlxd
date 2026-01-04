@@ -43,11 +43,28 @@ type APIResponse struct {
 var config Config
 
 func loadConfig() error {
-	data, err := os.ReadFile("configs/config.yaml")
-	if err != nil {
-		return err
+	// 按优先级尝试多个配置文件路径
+	configPaths := []string{
+		"/etc/openlxd/config.yaml",           // 生产环境路径
+		"configs/config.yaml",               // 开发环境路径
+		"./config.yaml",                     // 当前目录
+		"/opt/openlxd/config.yaml",          // 备用路径
 	}
-	return yaml.Unmarshal(data, &config)
+	
+	var lastErr error
+	for _, path := range configPaths {
+		data, err := os.ReadFile(path)
+		if err == nil {
+			if err := yaml.Unmarshal(data, &config); err != nil {
+				return fmt.Errorf("配置文件解析失败 (%s): %v", path, err)
+			}
+			log.Printf("成功加载配置文件: %s", path)
+			return nil
+		}
+		lastErr = err
+	}
+	
+	return fmt.Errorf("未找到配置文件，已尝试路径: %v\n最后错误: %v", configPaths, lastErr)
 }
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
