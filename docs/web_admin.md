@@ -4,6 +4,8 @@
 
 OpenLXD 提供了一个简洁易用的 Web 管理界面，可以通过浏览器直接管理 LXD 容器，无需使用命令行或 API。
 
+**✨ v2.0.0 新特性**：Web 界面文件已嵌入到二进制文件中，**无需额外部署 HTML 文件**，真正的单文件部署！
+
 ## 功能特性
 
 - ✅ 用户登录认证
@@ -12,12 +14,11 @@ OpenLXD 提供了一个简洁易用的 Web 管理界面，可以通过浏览器�
 - ✅ 流量统计显示
 - ✅ 自动数据刷新（每30秒）
 - ✅ 响应式设计，支持移动端访问
+- ✅ **单文件部署**（HTML 文件已嵌入二进制）
 
-## 部署方法
+## 快速开始
 
-### 方法一：完整安装（推荐）
-
-使用一键安装脚本会自动部署 Web 界面所需的所有文件：
+### 方法一：使用一键安装脚本（推荐）
 
 ```bash
 # 下载并运行安装脚本
@@ -26,32 +27,50 @@ chmod +x install.sh
 sudo ./install.sh
 ```
 
-安装脚本会自动：
-1. 下载二进制文件到 `/usr/local/bin/openlxd`
-2. 克隆完整项目到 `/opt/openlxd`
-3. 配置 systemd 服务，工作目录设置为 `/opt/openlxd`
+安装完成后直接访问：`http://你的服务器IP:8443/admin/login`
 
-### 方法二：手动部署
-
-如果你已经安装了 OpenLXD 但没有 Web 界面文件，按以下步骤操作：
-
-#### 1. 克隆项目源码
+### 方法二：手动部署（仅需二进制文件）
 
 ```bash
-# 克隆到 /opt/openlxd
-cd /opt
-sudo git clone https://github.com/areyouokbro/openlxd.git
+# 1. 下载二进制文件
+wget https://github.com/areyouokbro/openlxd/releases/latest/download/openlxd-linux-amd64
+
+# 2. 安装
+sudo mv openlxd-linux-amd64 /usr/local/bin/openlxd
+sudo chmod +x /usr/local/bin/openlxd
+
+# 3. 创建配置文件
+sudo mkdir -p /etc/openlxd
+sudo nano /etc/openlxd/config.yaml
 ```
 
-#### 2. 修改 systemd 服务配置
+配置文件内容：
 
-编辑服务文件：
+```yaml
+server:
+  port: 8443
+  host: "0.0.0.0"
+
+security:
+  api_hash: "your-secret-api-key-here"
+  admin_user: "admin"
+  admin_pass: "admin123"  # 请修改为强密码
+  session_secret: "your-session-secret"
+
+database:
+  type: "sqlite"
+
+lxd:
+  socket: "/var/snap/lxd/common/lxd/unix.socket"
+  bridge: "lxdbr0"
+```
 
 ```bash
+# 4. 配置 systemd 服务
 sudo nano /etc/systemd/system/openlxd.service
 ```
 
-确保 `WorkingDirectory` 设置为项目目录：
+服务配置：
 
 ```ini
 [Unit]
@@ -61,7 +80,6 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/openlxd
 ExecStart=/usr/local/bin/openlxd
 Restart=on-failure
 RestartSec=5s
@@ -70,33 +88,14 @@ RestartSec=5s
 WantedBy=multi-user.target
 ```
 
-#### 3. 重新加载并启动服务
+> ✅ **注意**：v2.0.0+ 版本不再需要设置 `WorkingDirectory`，因为 HTML 文件已嵌入二进制！
 
 ```bash
+# 5. 启动服务
 sudo systemctl daemon-reload
-sudo systemctl restart openlxd
+sudo systemctl enable openlxd
+sudo systemctl start openlxd
 sudo systemctl status openlxd
-```
-
-### 方法三：从源码编译部署
-
-```bash
-# 克隆项目
-git clone https://github.com/areyouokbro/openlxd.git
-cd openlxd
-
-# 编译
-CGO_ENABLED=1 go build -ldflags='-linkmode external -extldflags "-static"' \
-  -tags sqlite_omit_load_extension \
-  -o bin/openlxd-linux-amd64 \
-  cmd/main.go
-
-# 安装
-sudo cp bin/openlxd-linux-amd64 /usr/local/bin/openlxd
-sudo chmod +x /usr/local/bin/openlxd
-
-# 配置 systemd 服务（WorkingDirectory 指向项目目录）
-sudo systemctl restart openlxd
 ```
 
 ## 访问 Web 管理界面
@@ -189,28 +188,19 @@ sudo systemctl restart openlxd
 
 ### Q1: 访问 Web 界面显示 404 错误
 
-**原因**：Web 界面文件未正确部署。
+**v2.0.0+ 版本已解决此问题**！HTML 文件已嵌入二进制，不会出现 404 错误。
 
-**解决方法**：
+如果仍然遇到问题：
 
 ```bash
-# 检查项目目录是否存在
-ls -la /opt/openlxd/web/templates/
+# 检查服务是否运行
+sudo systemctl status openlxd
 
-# 如果不存在，克隆项目
-cd /opt
-sudo git clone https://github.com/areyouokbro/openlxd.git
+# 查看日志
+sudo journalctl -u openlxd -n 50
 
-# 检查 systemd 服务的工作目录
-sudo systemctl cat openlxd.service | grep WorkingDirectory
-
-# 如果工作目录不是 /opt/openlxd，修改服务配置
-sudo nano /etc/systemd/system/openlxd.service
-# 添加或修改: WorkingDirectory=/opt/openlxd
-
-# 重新加载并重启服务
-sudo systemctl daemon-reload
-sudo systemctl restart openlxd
+# 确认端口监听
+sudo netstat -tlnp | grep 8443
 ```
 
 ### Q2: 登录后显示"加载失败，请检查 API Key 是否正确"
@@ -226,10 +216,7 @@ sudo systemctl status openlxd
 # 查看日志
 sudo journalctl -u openlxd -n 50
 
-# 检查 API Key
-sudo cat /etc/openlxd/.api_key
-
-# 确认配置文件中的 API Key 一致
+# 检查配置文件中的 API Key
 sudo cat /etc/openlxd/config.yaml | grep api_hash
 ```
 
@@ -294,6 +281,42 @@ sudo systemctl restart openlxd
 sudo journalctl -u openlxd -n 20
 ```
 
+## 部署优势（v2.0.0+）
+
+### ✅ 单文件部署
+
+- 只需一个二进制文件即可运行
+- 无需额外的 `web/` 目录
+- 无需克隆完整项目
+- 无需设置 `WorkingDirectory`
+
+### ✅ 简化的部署流程
+
+**旧版本**（需要外部文件）：
+```bash
+# 下载二进制
+wget https://github.com/.../openlxd-linux-amd64
+# 克隆项目（获取 web 文件）
+git clone https://github.com/.../openlxd.git
+# 设置 WorkingDirectory
+# ...
+```
+
+**新版本**（单文件）：
+```bash
+# 下载二进制
+wget https://github.com/.../openlxd-linux-amd64
+# 配置并启动
+sudo mv openlxd-linux-amd64 /usr/local/bin/openlxd
+sudo systemctl start openlxd
+```
+
+### ✅ 更可靠
+
+- 不会因为文件路径问题导致 404
+- 不会因为 WorkingDirectory 设置错误而失败
+- HTML 文件永远与二进制版本一致
+
 ## 安全建议
 
 1. **修改默认密码**
@@ -342,19 +365,18 @@ server {
 
 ## 技术细节
 
-### 文件结构
+### 文件嵌入技术
 
-```
-/opt/openlxd/
-├── web/
-│   └── templates/
-│       ├── login.html       # 登录页面
-│       ├── dashboard.html   # 管理后台
-│       └── index.html       # 默认首页
-├── configs/
-│   └── config.yaml          # 配置文件模板
-└── bin/
-    └── openlxd-linux-amd64  # 二进制文件
+v2.0.0+ 使用 Go 1.16+ 的 `embed` 包将 HTML 文件嵌入到二进制：
+
+```go
+//go:embed web/templates/*
+var webTemplates embed.FS
+
+func serveEmbeddedFile(w http.ResponseWriter, filename string) {
+    data, err := webTemplates.ReadFile("web/templates/" + filename)
+    // ...
+}
 ```
 
 ### API 端点
