@@ -4,7 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -16,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed ../web/templates/*
+//go:embed web/templates/*
 var webTemplates embed.FS
 
 type Config struct {
