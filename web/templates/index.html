@@ -97,11 +97,19 @@
     </div>
 
     <script>
-        async function refreshStats() {
-            // 这里后续对接后端 API
-            console.log("Refreshing stats...");
+        // 检查是否已登录
+        const authToken = localStorage.getItem('auth_token');
+        const apiKey = localStorage.getItem('api_key');
+        
+        if (!authToken && !apiKey) {
+            // 未登录，跳转到登录页
+            window.location.href = '/admin/login';
+        } else {
+            // 已登录，加载 dashboard.js
+            const script = document.createElement('script');
+            script.src = '/static/dashboard.js';
+            document.body.appendChild(script);
         }
-        window.onload = refreshStats;
     </script>
 </body>
 </html>
