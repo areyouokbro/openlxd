@@ -83,7 +83,6 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 		Source: api.InstanceSource{
 			Type:        "image",
 			Fingerprint: image.Target,
-			Server:      imageServer.GetConnectionInfo().URL,
 		},
 		InstancePut: api.InstancePut{
 			Config:  config,

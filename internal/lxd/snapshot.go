@@ -100,7 +100,7 @@ func DeleteSnapshot(containerName, snapshotName string) error {
 	}
 
 	// 删除快照
-	op, err := Client.DeleteInstanceSnapshot(containerName, snapshotName, "")
+	op, err := Client.DeleteInstanceSnapshot(containerName, snapshotName)
 	if err != nil {
 		return fmt.Errorf("删除快照失败: %v", err)
 	}
