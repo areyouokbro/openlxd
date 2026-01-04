@@ -2,9 +2,12 @@
 
 ## 概述
 
-OpenLXD 支持两种 HTTPS 配置方式：
-1. **自动 Let's Encrypt 证书**（推荐，免费，自动续期）
-2. **手动证书**（适用于已有证书或内网环境）
+OpenLXD 支持三种 HTTPS 配置方式：
+1. **自动 Let's Encrypt 证书（域名）**（推荐，免费，90天有效期）
+2. **自动 Let's Encrypt 证书（IP 地址）**（新特性，免费，6天有效期）
+3. **手动证书**（适用于已有证书或内网环境）
+
+> ✨ **新特性**：Let's Encrypt 从 2025 年 7 月起支持为 IP 地址申请证书，无需域名即可使用 HTTPS！
 
 ## 方式一：Let's Encrypt 自动证书（推荐）
 
@@ -103,7 +106,100 @@ Let's Encrypt 证书有效期为 90 天，但 `autocert` 会自动续期，无�
 
 证书文件存储在：`/etc/openlxd/certs/`
 
-## 方式二：手动证书
+## 方式二：Let's Encrypt IP 地址证书（无需域名）
+
+### 前提条件
+
+1. **服务器有公网 IP**
+2. **80 和 443 端口可访问**（Let's Encrypt 需要 80 端口验证）
+3. **无需域名**！
+
+### 配置步骤
+
+#### 1. 编辑配置文件
+
+```bash
+sudo nano /etc/openlxd/config.yaml
+```
+
+修改以下配置：
+
+```yaml
+server:
+  port: 443
+  host: "0.0.0.0"
+  https: true                    # 启用 HTTPS
+  domain: ""                     # 留空，表示使用 IP 证书
+  cert_dir: "/etc/openlxd/certs"
+  auto_tls: true                 # 启用自动证书
+```
+
+> ⚠️ **重要**：`domain` 字段必须为空或不设置，系统会自动使用 IP 地址申请证书。
+
+#### 2. 开放必要端口
+
+```bash
+# UFW 防火墙
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# firewalld
+sudo firewall-cmd --permanent --add-port=80/tcp
+sudo firewall-cmd --permanent --add-port=443/tcp
+sudo firewall-cmd --reload
+```
+
+#### 3. 重启服务
+
+```bash
+sudo systemctl restart openlxd
+```
+
+#### 4. 查看日志确认证书申请成功
+
+```bash
+sudo journalctl -u openlxd -f
+```
+
+你应该看到类似以下日志：
+
+```
+HTTP 服务器启动 (ACME 验证): :80
+服务器监听 (HTTPS): 0.0.0.0:443
+模式: IP 地址证书
+警告: IP 证书有效期仅 6 天，将自动频繁续期
+证书目录: /etc/openlxd/certs
+```
+
+#### 5. 访问测试
+
+```bash
+# 使用服务器 IP 访问
+curl https://156.246.90.151/api/system/stats \
+  -H "X-API-Hash: your-api-key"
+```
+
+Web 管理界面：
+```
+https://156.246.90.151/admin/login
+```
+
+### IP 证书特点
+
+- ✅ **无需域名**：直接使用 IP 地址
+- ✅ **免费**：Let's Encrypt 提供
+- ✅ **自动续期**：autocert 自动处理
+- ⚠️ **短有效期**：仅 6 天（但会自动续期）
+- ✅ **适合场景**：工业物联网、边缘计算、测试环境
+
+### 注意事项
+
+1. **频繁续期**：IP 证书每 6 天就要续期一次，autocert 会自动处理，但会增加网络请求
+2. **公网 IP 必须**：Let's Encrypt 需要通过公网访问你的服务器
+3. **80 端口必须开放**：ACME HTTP-01 验证需要
+4. **不适合内网**：内网 IP 无法申请，请使用手动证书或自签名证书
+
+## 方式三：手动证书
 
 ### 适用场景
 

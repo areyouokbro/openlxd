@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"embed"
 	"encoding/json"
@@ -457,10 +458,21 @@ func startHTTPSWithAutoCert() {
 	os.MkdirAll(certDir, 0700)
 	
 	// 配置 autocert
+	// 支持域名和 IP 地址
 	certManager := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(config.Server.Domain),
-		Cache:      autocert.DirCache(certDir),
+		Prompt: autocert.AcceptTOS,
+		HostPolicy: func(ctx context.Context, host string) error {
+			// 如果配置了域名，使用域名
+			if config.Server.Domain != "" {
+				if host == config.Server.Domain {
+					return nil
+				}
+				return fmt.Errorf("不允许的域名: %s", host)
+			}
+			// 否则允许任何主机（用于 IP 证书）
+			return nil
+		},
+		Cache: autocert.DirCache(certDir),
 	}
 	
 	// HTTP 服务器（用于 ACME 验证）
@@ -479,7 +491,13 @@ func startHTTPSWithAutoCert() {
 	}
 	
 	log.Printf("服务器监听 (HTTPS): %s", server.Addr)
-	log.Printf("域名: %s", config.Server.Domain)
+	if config.Server.Domain != "" {
+		log.Printf("模式: 域名证书")
+		log.Printf("域名: %s", config.Server.Domain)
+	} else {
+		log.Printf("模式: IP 地址证书")
+		log.Printf("警告: IP 证书有效期仅 6 天，将自动频繁续期")
+	}
 	log.Printf("证书目录: %s", certDir)
 	log.Fatal(server.ListenAndServeTLS("", ""))
 }
