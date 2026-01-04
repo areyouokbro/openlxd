@@ -199,6 +199,10 @@ func main() {
 func setupRoutes(mux *http.ServeMux) {
 	// Web 管理界面
 	mux.HandleFunc("/", handleWebUI)
+	
+	// 静态文件路由
+	mux.HandleFunc("/static/", handleStaticFiles)
+	
 	mux.HandleFunc("/admin", handleAdminLogin)
 	mux.HandleFunc("/admin/login", handleAdminLogin)
 	mux.HandleFunc("/admin/api/login", handleAdminLoginAPI)
@@ -326,6 +330,18 @@ func handleWebUI(w http.ResponseWriter, r *http.Request) {
 	}
 	// 显示首页
 	serveEmbeddedFile(w, "index.html")
+}
+
+// handleStaticFiles 处理静态文件请求
+func handleStaticFiles(w http.ResponseWriter, r *http.Request) {
+	// 从 URL路径中提取文件名
+	// 例如: /static/dashboard.js -> dashboard.js
+	filename := strings.TrimPrefix(r.URL.Path, "/static/")
+	if filename == "" {
+		http.NotFound(w, r)
+		return
+	}
+	serveEmbeddedFile(w, filename)
 }
 
 // handleAdminLogin 处理管理员登录页面
