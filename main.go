@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed web/templates/*
+//go:embed web/templates/* web/static/*
 var webTemplates embed.FS
 
 type Config struct {
@@ -310,7 +310,14 @@ func handleSystemStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveEmbeddedFile(w http.ResponseWriter, filename string) {
-	data, err := webTemplates.ReadFile("web/templates/" + filename)
+	var path string
+	if strings.HasSuffix(filename, ".js") || strings.HasSuffix(filename, ".css") {
+		path = "web/static/" + filename
+	} else {
+		path = "web/templates/" + filename
+	}
+	
+	data, err := webTemplates.ReadFile(path)
 	if err != nil {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
@@ -364,6 +371,163 @@ func handleAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	serveEmbeddedFile(w, "dashboard.html")
 }
 
+// ========== 镜像管理 API ==========
+
+func handleListImages(w http.ResponseWriter, r *http.Request) {
+	// TODO: 调用 LXD API 获取镜像列表
+	images := []map[string]interface{}{
+		{
+			"fingerprint": "abc123",
+			"alias":       "ubuntu/22.04",
+			"size":        "500MB",
+			"created":     "2025-01-01",
+		},
+	}
+	respondJSON(w, 200, "成功", images)
+}
+
+func handleDownloadImage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Alias  string `json:"alias"`
+		Server string `json:"server"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, 400, "请求参数错误", nil)
+		return
+	}
+	
+	// TODO: 调用 LXD API 下载镜像
+	respondJSON(w, 200, "镜像下载已启动", nil)
+}
+
+func handleDeleteImage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Fingerprint string `json:"fingerprint"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, 400, "请求参数错误", nil)
+		return
+	}
+	
+	// TODO: 调用 LXD API 删除镜像
+	respondJSON(w, 200, "镜像删除成功", nil)
+}
+
+// ========== 存储池管理 API ==========
+
+func handleListStorage(w http.ResponseWriter, r *http.Request) {
+	// TODO: 调用 LXD API 获取存储池列表
+	storage := []map[string]interface{}{
+		{
+			"name":   "default",
+			"driver": "dir",
+			"size":   "100GB",
+			"used":   "25GB",
+		},
+	}
+	respondJSON(w, 200, "成功", storage)
+}
+
+func handleCreateStorage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name   string `json:"name"`
+		Driver string `json:"driver"`
+		Size   string `json:"size"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, 400, "请求参数错误", nil)
+		return
+	}
+	
+	// TODO: 调用 LXD API 创建存储池
+	respondJSON(w, 200, "存储池创建成功", nil)
+}
+
+// ========== 网络管理 API ==========
+
+func handleListNetworks(w http.ResponseWriter, r *http.Request) {
+	// TODO: 调用 LXD API 获取网络列表
+	networks := []map[string]interface{}{
+		{
+			"name":    "lxdbr0",
+			"type":    "bridge",
+			"managed": true,
+			"ipv4":    "10.0.0.1/24",
+			"ipv6":    "fd42::/64",
+		},
+	}
+	respondJSON(w, 200, "成功", networks)
+}
+
+func handleCreateNetwork(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+		IPv4 string `json:"ipv4"`
+		IPv6 string `json:"ipv6"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, 400, "请求参数错误", nil)
+		return
+	}
+	
+	// TODO: 调用 LXD API 创建网络
+	respondJSON(w, 200, "网络创建成功", nil)
+}
+
+func handleListPortForwards(w http.ResponseWriter, r *http.Request) {
+	// TODO: 从数据库获取端口转发列表
+	forwards := []map[string]interface{}{
+		{
+			"id":           1,
+			"container":    "web-01",
+			"public_ip":    "156.246.90.151",
+			"public_port":  8080,
+			"private_port": 80,
+			"protocol":     "tcp",
+			"interface":    "eth0",
+		},
+	}
+	respondJSON(w, 200, "成功", forwards)
+}
+
+func handleCreatePortForward(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Container   string `json:"container"`
+		PublicIP    string `json:"public_ip"`
+		PublicPort  int    `json:"public_port"`
+		PrivatePort int    `json:"private_port"`
+		Protocol    string `json:"protocol"`
+		Interface   string `json:"interface"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, 400, "请求参数错误", nil)
+		return
+	}
+	
+	// TODO: 创建 iptables 规则并保存到数据库
+	respondJSON(w, 200, "端口转发创建成功", nil)
+}
+
+func handleDeletePortForward(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID int `json:"id"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, 400, "请求参数错误", nil)
+		return
+	}
+	
+	// TODO: 删除 iptables 规则并从数据库删除
+	respondJSON(w, 200, "端口转发删除成功", nil)
+}
+
 func main() {
 	// 加载配置
 	if err := loadConfig(); err != nil {
@@ -396,10 +560,16 @@ func main() {
 	// 路由配置
 	// Web 管理界面路由
 	http.HandleFunc("/admin/login", handleAdminLogin)
-	http.HandleFunc("/admin/api/login", handleAdminLoginAPI)
+	http.HandleFunc("/admin/api/login", handleAdminAPILogin)
 	http.HandleFunc("/admin/dashboard", handleAdminDashboard)
 	http.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/login", http.StatusFound)
+	})
+	
+	// 静态文件服务
+	http.HandleFunc("/static/", func(w http.ResponseWriter, r *http.Request) {
+		filename := strings.TrimPrefix(r.URL.Path, "/static/")
+		serveEmbeddedFile(w, filename)
 	})
 	
 	// 默认首页
@@ -429,6 +599,22 @@ func main() {
 	http.HandleFunc("/api/system/traffic/reset", authMiddleware(handleResetTraffic))
 	http.HandleFunc("/api/system/console/create-token", authMiddleware(handleCreateConsoleToken))
 	http.HandleFunc("/api/system/stats", authMiddleware(handleSystemStats))
+	
+	// 镜像管理 API
+	http.HandleFunc("/api/system/images", authMiddleware(handleListImages))
+	http.HandleFunc("/api/system/images/download", authMiddleware(handleDownloadImage))
+	http.HandleFunc("/api/system/images/delete", authMiddleware(handleDeleteImage))
+	
+	// 存储池管理 API
+	http.HandleFunc("/api/system/storage", authMiddleware(handleListStorage))
+	http.HandleFunc("/api/system/storage/create", authMiddleware(handleCreateStorage))
+	
+	// 网络管理 API
+	http.HandleFunc("/api/system/networks", authMiddleware(handleListNetworks))
+	http.HandleFunc("/api/system/networks/create", authMiddleware(handleCreateNetwork))
+	http.HandleFunc("/api/system/port-forwards", authMiddleware(handleListPortForwards))
+	http.HandleFunc("/api/system/port-forwards/create", authMiddleware(handleCreatePortForward))
+	http.HandleFunc("/api/system/port-forwards/delete", authMiddleware(handleDeletePortForward))
 	
 	// 启动服务器
 	if config.Server.HTTPS {
