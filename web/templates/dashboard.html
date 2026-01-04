@@ -337,6 +337,7 @@
             <button class="tab-button" onclick="switchTab('ippool')">📍 IP地址池</button>
             <button class="tab-button" onclick="switchTab('portmapping')">🔀 端口映射</button>
             <button class="tab-button" onclick="switchTab('proxy')">🌐 反向代理</button>
+            <button class="tab-button" onclick="switchTab('quota')">📊 配额管理</button>
             <button class="tab-button" onclick="switchTab('images')">💿 镜像管理</button>
         </div>
     </div>
@@ -540,6 +541,37 @@
             </div>
         </div>
         
+        <!-- 配额管理标签页 -->
+        <div id="tab-quota" class="tab-content">
+            <div class="actions-bar">
+                <div class="actions-left">
+                    <button class="btn btn-primary" onclick="showSetQuotaModal()">⚙️ 设置配额</button>
+                    <button class="btn btn-secondary" onclick="loadQuotas()">🔄 刷新</button>
+                </div>
+            </div>
+            
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>容器ID</th>
+                            <th>IPv4配额</th>
+                            <th>IPv6配额</th>
+                            <th>端口映射配额</th>
+                            <th>反向代理配额</th>
+                            <th>流量配额(GB)</th>
+                            <th>已用流量(GB)</th>
+                            <th>超限处理</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quota-tbody">
+                        <tr><td colspan="9" class="loading">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
         <!-- 网络管理标签页 -->
         <div id="tab-networks" class="tab-content">
             <div class="actions-bar">
@@ -603,5 +635,6 @@
     
     <script src="/static/dashboard.js"></script>
     <script src="/static/network.js"></script>
+    <script src="/static/quota.js"></script>
 </body>
 </html>

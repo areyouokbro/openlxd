@@ -3,12 +3,13 @@ package network
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
-"os/exec"
 	"sync"
 	"text/template"
 
 	"github.com/openlxd/backend/internal/models"
+	"github.com/openlxd/backend/internal/quota"
 )
 
 // ProxyManager 反向代理管理器
@@ -78,9 +79,15 @@ func (p *ProxyManager) AddProxy(containerID uint, domain, targetIP string, targe
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	// 检查配额
+	err := quota.GlobalQuotaManager.CheckProxyQuota(containerID)
+	if err != nil {
+		return nil, err
+	}
+
 	// 检查域名是否已存在
 	var existing models.ProxyConfig
-	err := models.DB.Where("domain = ?", domain).First(&existing).Error
+	err = models.DB.Where("domain = ?", domain).First(&existing).Error
 	if err == nil {
 		return nil, fmt.Errorf("域名 %s 已被使用", domain)
 	}

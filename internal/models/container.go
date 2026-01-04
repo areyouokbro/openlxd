@@ -88,13 +88,38 @@ type ProxyConfig struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// Quota 配额模型（为后续配额系统做准备）
+// Quota 配额模型
 type Quota struct {
-	ID               uint `gorm:"primaryKey" json:"id"`
-	UserID           uint `json:"user_id"`
-	IPv4Quota        int  `json:"ipv4_quota"`
-	IPv6Quota        int  `json:"ipv6_quota"`
-	IPv4MappingQuota int  `json:"ipv4_mapping_quota"`
-	IPv6MappingQuota int  `json:"ipv6_mapping_quota"`
-	ProxyQuota       int  `json:"proxy_quota"`
+	ID               uint      `gorm:"primaryKey" json:"id"`
+	ContainerID      uint      `gorm:"uniqueIndex" json:"container_id"`
+	// IP地址配额
+	IPv4Quota        int       `gorm:"default:-1" json:"ipv4_quota"` // -1 表示无限制
+	IPv6Quota        int       `gorm:"default:-1" json:"ipv6_quota"`
+	// 端口映射配额
+	PortMappingQuota int       `gorm:"default:-1" json:"port_mapping_quota"`
+	// 反向代理配额
+	ProxyQuota       int       `gorm:"default:-1" json:"proxy_quota"`
+	// 流量配额（单位：GB）
+	TrafficQuota     int64     `gorm:"default:-1" json:"traffic_quota"` // -1 表示无限制
+	TrafficUsed      int64     `gorm:"default:0" json:"traffic_used"`   // 已使用流量
+	TrafficResetDate time.Time `json:"traffic_reset_date"`              // 流量重置日期
+	// 配额超限处理
+	OnExceed         string    `gorm:"default:'warn'" json:"on_exceed"` // warn, limit, stop
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// QuotaUsage 配额使用情况
+type QuotaUsage struct {
+	ContainerID      uint  `json:"container_id"`
+	IPv4Used         int   `json:"ipv4_used"`
+	IPv6Used         int   `json:"ipv6_used"`
+	PortMappingUsed  int   `json:"port_mapping_used"`
+	ProxyUsed        int   `json:"proxy_used"`
+	TrafficUsed      int64 `json:"traffic_used"`
+	IPv4Quota        int   `json:"ipv4_quota"`
+	IPv6Quota        int   `json:"ipv6_quota"`
+	PortMappingQuota int   `json:"port_mapping_quota"`
+	ProxyQuota       int   `json:"proxy_quota"`
+	TrafficQuota     int64 `json:"traffic_quota"`
 }

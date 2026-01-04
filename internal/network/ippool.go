@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/openlxd/backend/internal/models"
+	"github.com/openlxd/backend/internal/quota"
 )
 
 // IPPool IP地址池管理
@@ -31,9 +32,15 @@ func (p *IPPool) AllocateIPv4(containerID uint) (*IPAddress, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	// 检查配额
+	err := quota.GlobalQuotaManager.CheckIPv4Quota(containerID)
+	if err != nil {
+		return nil, err
+	}
+
 	// 从数据库查找可用的 IPv4 地址
 	var ipAddr models.IPAddress
-	err := models.DB.Where("type = ? AND status = ?", "ipv4", "available").First(&ipAddr).Error
+	err = models.DB.Where("type = ? AND status = ?", "ipv4", "available").First(&ipAddr).Error
 	if err != nil {
 		return nil, fmt.Errorf("没有可用的 IPv4 地址")
 	}
@@ -59,9 +66,15 @@ func (p *IPPool) AllocateIPv6(containerID uint) (*IPAddress, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
+	// 检查配额
+	err := quota.GlobalQuotaManager.CheckIPv6Quota(containerID)
+	if err != nil {
+		return nil, err
+	}
+
 	// 从数据库查找可用的 IPv6 地址
 	var ipAddr models.IPAddress
-	err := models.DB.Where("type = ? AND status = ?", "ipv6", "available").First(&ipAddr).Error
+	err = models.DB.Where("type = ? AND status = ?", "ipv6", "available").First(&ipAddr).Error
 	if err != nil {
 		return nil, fmt.Errorf("没有可用的 IPv6 地址")
 	}

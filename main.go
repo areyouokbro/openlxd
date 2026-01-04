@@ -149,6 +149,12 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/network/portmapping", authMiddleware(api.HandlePortMapping))
 	mux.HandleFunc("/api/network/proxy", authMiddleware(api.HandleProxy))
 	mux.HandleFunc("/api/network/stats", authMiddleware(api.HandleNetworkStats))
+	
+	// 配额管理
+	mux.HandleFunc("/api/quota", authMiddleware(api.HandleQuota))
+	mux.HandleFunc("/api/quota/usage", authMiddleware(api.HandleQuotaUsage))
+	mux.HandleFunc("/api/quota/stats", authMiddleware(api.HandleQuotaStats))
+	mux.HandleFunc("/api/quota/reset-traffic", authMiddleware(api.HandleResetTraffic))
 }
 
 // authMiddleware 认证中间件

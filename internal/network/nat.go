@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/openlxd/backend/internal/models"
+	"github.com/openlxd/backend/internal/quota"
 )
 
 // NATManager NAT 端口映射管理器
@@ -36,9 +37,15 @@ func (n *NATManager) AddPortMapping(containerID uint, containerIP, protocol stri
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
+	// 检查配额
+	err := quota.GlobalQuotaManager.CheckPortMappingQuota(containerID, 1)
+	if err != nil {
+		return nil, err
+	}
+
 	// 检查端口是否已被使用
 	var existing models.PortMapping
-	err := models.DB.Where("external_port = ? AND protocol = ?", externalPort, protocol).First(&existing).Error
+	err = models.DB.Where("external_port = ? AND protocol = ?", externalPort, protocol).First(&existing).Error
 	if err == nil {
 		return nil, fmt.Errorf("外部端口 %d 已被使用", externalPort)
 	}
@@ -77,6 +84,12 @@ func (n *NATManager) AddPortMapping(containerID uint, containerIP, protocol stri
 func (n *NATManager) AddPortRange(containerID uint, containerIP, protocol string, externalStartPort, internalStartPort, count int, description string) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+
+	// 检查配额
+	err := quota.GlobalQuotaManager.CheckPortMappingQuota(containerID, count)
+	if err != nil {
+		return err
+	}
 
 	for i := 0; i < count; i++ {
 		externalPort := externalStartPort + i
