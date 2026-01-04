@@ -175,7 +175,7 @@
                 
                 if (data.code === 200) {
                     showAlert('登录成功，正在跳转...', 'success');
-                    localStorage.setItem('admin_token', data.data.token);
+                    localStorage.setItem('api_key', data.data.token);
                     setTimeout(() => {
                         window.location.href = '/admin/dashboard';
                     }, 1000);

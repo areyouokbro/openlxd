@@ -198,12 +198,12 @@ create_config() {
     # 创建配置文件
     cat > "$CONFIG_DIR/config.yaml" << EOF
 server:
-  port: 8443
+  port: 443
   host: "0.0.0.0"
-  https: false                    # 默认使用 HTTP，如需 HTTPS 请改为 true
-  domain: ""                      # 你的域名（用于 Let's Encrypt）
+  https: true                     # 启用 HTTPS
+  domain: ""                      # 留空使用 IP 证书，填写域名使用域名证书
   cert_dir: "/etc/openlxd/certs" # 证书存储目录
-  auto_tls: false                 # 自动申请 Let's Encrypt 证书
+  auto_tls: true                  # 自动申请 Let's Encrypt 证书
 
 security:
   api_hash: "$API_KEY"
@@ -262,19 +262,22 @@ setup_firewall() {
     
     # UFW
     if command -v ufw &> /dev/null; then
-        ufw allow 8443/tcp >/dev/null 2>&1
-        print_success "UFW 防火墙规则已添加"
+        ufw allow 80/tcp >/dev/null 2>&1
+        ufw allow 443/tcp >/dev/null 2>&1
+        print_success "UFW 防火墙规则已添加 (80, 443)"
     # firewalld
     elif command -v firewall-cmd &> /dev/null; then
-        firewall-cmd --permanent --add-port=8443/tcp >/dev/null 2>&1
+        firewall-cmd --permanent --add-port=80/tcp >/dev/null 2>&1
+        firewall-cmd --permanent --add-port=443/tcp >/dev/null 2>&1
         firewall-cmd --reload >/dev/null 2>&1
-        print_success "firewalld 防火墙规则已添加"
+        print_success "firewalld 防火墙规则已添加 (80, 443)"
     # iptables
     elif command -v iptables &> /dev/null; then
-        iptables -A INPUT -p tcp --dport 8443 -j ACCEPT >/dev/null 2>&1
-        print_success "iptables 防火墙规则已添加"
+        iptables -A INPUT -p tcp --dport 80 -j ACCEPT >/dev/null 2>&1
+        iptables -A INPUT -p tcp --dport 443 -j ACCEPT >/dev/null 2>&1
+        print_success "iptables 防火墙规则已添加 (80, 443)"
     else
-        print_warning "未检测到防火墙，请手动开放 8443 端口"
+        print_warning "未检测到防火墙，请手动开放 80 和 443 端口"
     fi
 }
 
@@ -354,8 +357,14 @@ show_install_info() {
     echo ""
     echo "API 信息:"
     echo "  API Key: $API_KEY"
-    echo "  API 地址: http://$SERVER_IP:8443"
-    echo "  Web 管理: http://$SERVER_IP:8443/admin/login"
+    echo "  API 地址: https://$SERVER_IP"
+    echo "  Web 管理: https://$SERVER_IP/admin/login"
+    echo ""
+    echo "HTTPS 证书:"
+    echo "  类型: Let's Encrypt IP 证书"
+    echo "  有效期: 6 天（自动续期）"
+    echo "  证书目录: /etc/openlxd/certs"
+    echo "  注意: 首次启动时会自动申请证书，需要 1-2 分钟"
     echo ""
     echo "Web 登录凭据:"
     echo "  用户名: admin"
@@ -369,9 +378,11 @@ show_install_info() {
     echo "  查看日志: journalctl -u openlxd -f"
     echo ""
     echo "重要提示:"
-    echo "  1. 请妥善保管 API Key"
+    echo "  1. 请妃善保管 API Key"
     echo "  2. 建议修改默认管理员密码"
-    echo "  3. 如需集成财务系统，请使用上述 API Key"
+    echo "  3. HTTPS 证书首次申请需要 1-2 分钟，请耐心等待"
+    echo "  4. 如需使用域名证书，请编辑 /etc/openlxd/config.yaml"
+    echo "  5. WHMCS 对接请使用 https://$SERVER_IP 和上述 API Key"
     echo ""
     echo "========================================"
     echo ""
