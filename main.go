@@ -29,6 +29,8 @@ import (
 	"github.com/openlxd/backend/internal/monitor"
 )
 
+var lxdConnected bool
+
 //go:embed web
 var webFS embed.FS
 
@@ -60,13 +62,34 @@ func main() {
 
 	// 3. 初始化 LXD 客户端
 	if err := lxd.InitLXD(cfg.LXD.Socket); err != nil {
-		log.Fatalf("LXD 初始化失败: %v", err)
-	}
-	log.Println("LXD 客户端初始化成功")
-
-	// 4. 同步 LXD 容器到数据库
-	if err := syncContainersFromLXD(); err != nil {
-		log.Printf("警告: 容器同步失败: %v", err)
+		log.Printf("⚠️  LXD 初始化失败: %v\n", err)
+		log.Println("")
+		log.Println("========================================")
+		log.Println("检测到 LXD 未安装或未启动")
+		log.Println("========================================")
+		log.Println("")
+		log.Println("请安装 LXD：")
+		log.Println("  sudo snap install lxd")
+		log.Println("  sudo lxd init --auto")
+		log.Println("")
+		log.Println("或使用一键安装脚本：")
+		log.Println("  wget https://raw.githubusercontent.com/areyouokbro/openlxd/master/install.sh")
+		log.Println("  sudo bash install.sh")
+		log.Println("")
+		log.Println("========================================")
+		log.Println("")
+		log.Println("OpenLXD 将继续运行，但容器管理功能将不可用")
+		log.Println("安装 LXD 后请重启 OpenLXD")
+		log.Println("")
+		lxdConnected = false
+	} else {
+		log.Println("LXD 客户端初始化成功")
+		lxdConnected = true
+		
+		// 4. 同步 LXD 容器到数据库
+		if err := syncContainersFromLXD(); err != nil {
+			log.Printf("警告: 容器同步失败: %v", err)
+		}
 	}
 
 	// 5. 启动监控数据采集器（每5分钟采集一次）
