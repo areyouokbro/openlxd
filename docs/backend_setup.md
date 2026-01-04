@@ -35,8 +35,8 @@ OpenLXD 后端是整个系统的核心，负责与 LXD 通信、管理数据库�
    ```
 3. **编译并运行**:
    ```bash
-   go build -o openlxd-backend cmd/main.go
-   sudo ./openlxd-backend
+   go build -o openlxd cmd/main.go
+   sudo ./openlxd
    ```
 服务默认监听 `8443` 端口。
 

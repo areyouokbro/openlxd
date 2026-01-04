@@ -39,7 +39,7 @@ OpenLXD 是一个生产级的 LXD 容器管理系统，提供完整的 RESTful A
 
 ```bash
 # 下载项目
-git clone https://github.com/yourusername/openlxd.git
+git clone https://github.com/areyouokbro/openlxd.git
 cd openlxd
 
 # 运行安装脚本
@@ -58,7 +58,7 @@ sudo bash scripts/install.sh
 
 ```bash
 # 下载最新版本
-wget https://github.com/yourusername/openlxd/releases/latest/download/openlxd-linux-amd64
+wget https://github.com/areyouokbro/openlxd/releases/latest/download/openlxd-linux-amd64
 
 # 安装
 sudo mv openlxd-linux-amd64 /usr/local/bin/openlxd
@@ -269,9 +269,9 @@ cp -r Fmis/zjmf/lxdapiserver /path/to/zjmf/plugins/server/
 
 ## 📮 联系方式
 
-- **项目主页**: https://github.com/yourusername/openlxd
-- **问题反馈**: https://github.com/yourusername/openlxd/issues
-- **讨论区**: https://github.com/yourusername/openlxd/discussions
+- **项目主页**: https://github.com/areyouokbro/openlxd
+- **问题反馈**: https://github.com/areyouokbro/openlxd/issues
+- **讨论区**: https://github.com/areyouokbro/openlxd/discussions
 
 ## ⭐ Star History
 

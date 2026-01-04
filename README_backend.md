@@ -77,7 +77,7 @@ OpenLXD Backend 是一个**完全开源**的 LXD 容器管理后端，基于对�
 
 ```bash
 cd /opt
-git clone https://github.com/yourusername/openlxd-backend.git
+git clone https://github.com/areyouokbro/openlxd.git
 cd openlxd-backend
 ```
 
@@ -408,6 +408,6 @@ log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 ## 联系方式
 
-- 项目主页：https://github.com/yourusername/openlxd-backend
-- 问题反馈：https://github.com/yourusername/openlxd-backend/issues
-- 文档：https://github.com/yourusername/openlxd-backend/wiki
+- 项目主页：https://github.com/areyouokbro/openlxd
+- 问题反馈：https://github.com/areyouokbro/openlxd/issues
+- 文档：https://github.com/areyouokbro/openlxd/wiki
