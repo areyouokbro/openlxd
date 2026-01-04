@@ -1,0 +1,89 @@
+name: 🐛 Bug 报告
+description: 报告一个问题或错误
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您花时间填写这个 Bug 报告！
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰简洁地描述这个 Bug
+      placeholder: 告诉我们发生了什么...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 如何复现这个问题？
+      placeholder: |
+        1. 执行 '...'
+        2. 点击 '...'
+        3. 看到错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 您期望发生什么？
+      placeholder: 应该...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？
+      placeholder: 但是...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志输出
+      description: 请粘贴相关的日志输出
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: OpenLXD 版本
+      placeholder: v2.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: Ubuntu 22.04
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go 版本
+      placeholder: go1.22.0
+
+  - type: input
+    id: lxd-version
+    attributes:
+      label: LXD 版本
+      placeholder: 5.0.2
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 其他信息
+      description: 其他相关信息
