@@ -63,16 +63,19 @@ func AuthMiddleware(db *gorm.DB) func(http.Handler) http.Handler {
 	}
 }
 
-// APIKeyMiddleware API Key认证中间件
-func APIKeyMiddleware(db *gorm.DB) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// 从请求头获取API Key
-			apiKey := r.Header.Get("X-API-Key")
-			if apiKey == "" {
-				respondError(w, "Missing API key", http.StatusUnauthorized)
-				return
-			}
+	// APIKeyMiddleware API Key认证中间件（兼容lxdapi的X-API-Hash）
+	func APIKeyMiddleware(db *gorm.DB) func(http.Handler) http.Handler {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// 从请求头获取API Key（兼容X-API-Key和X-API-Hash）
+				apiKey := r.Header.Get("X-API-Key")
+				if apiKey == "" {
+					apiKey = r.Header.Get("X-API-Hash")
+				}
+				if apiKey == "" {
+					respondError(w, "Missing API key", http.StatusUnauthorized)
+					return
+				}
 
 			// 从数据库查找用户
 			var user models.User
