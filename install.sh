@@ -34,8 +34,53 @@ echo ""
 echo "步骤 1/5: 检查 LXD..."
 if ! command -v lxd &> /dev/null; then
     echo "LXD 未安装，正在安装..."
-    snap install lxd
-    lxd init --auto
+    
+    # 检测是否有 snap
+    if command -v snap &> /dev/null; then
+        echo "使用 snap 安装 LXD..."
+        snap install lxd
+        lxd init --auto
+    else
+        # 使用 apt 安装 LXD
+        echo "使用 apt 安装 LXD..."
+        apt-get update
+        apt-get install -y lxd lxd-client
+        
+        # 初始化 LXD
+        cat <<EOF | lxd init --preseed
+config: {}
+networks:
+- config:
+    ipv4.address: auto
+    ipv6.address: auto
+  description: ""
+  name: lxdbr0
+  type: ""
+  project: default
+storage_pools:
+- config:
+    size: 30GB
+  description: ""
+  name: default
+  driver: dir
+profiles:
+- config: {}
+  description: ""
+  devices:
+    eth0:
+      name: eth0
+      network: lxdbr0
+      type: nic
+    root:
+      path: /
+      pool: default
+      type: disk
+  name: default
+projects: []
+cluster: null
+EOF
+    fi
+    
     echo "✓ LXD 安装完成"
 else
     echo "✓ LXD 已安装"
