@@ -26,6 +26,9 @@ func InitDB(dbPath string) error {
 		&Container{},
 		&ActionLog{},
 		&NetworkConfig{},
+		&IPAddress{},
+		&PortMapping{},
+		&ProxyConfig{},
 		&Quota{},
 	)
 	if err != nil {

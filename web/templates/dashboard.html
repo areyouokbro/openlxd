@@ -334,10 +334,10 @@
     <div class="tabs">
         <div class="tab-buttons">
             <button class="tab-button active" onclick="switchTab('containers')">🖥️ 容器管理</button>
+            <button class="tab-button" onclick="switchTab('ippool')">📍 IP地址池</button>
+            <button class="tab-button" onclick="switchTab('portmapping')">🔀 端口映射</button>
+            <button class="tab-button" onclick="switchTab('proxy')">🌐 反向代理</button>
             <button class="tab-button" onclick="switchTab('images')">💿 镜像管理</button>
-            <button class="tab-button" onclick="switchTab('storage')">💾 存储池</button>
-            <button class="tab-button" onclick="switchTab('networks')">🌐 网络管理</button>
-            <button class="tab-button" onclick="switchTab('port-forwards')">🔀 端口转发</button>
         </div>
     </div>
     
@@ -448,6 +448,98 @@
             </div>
         </div>
         
+        <!-- IP地址池管理标签页 -->
+        <div id="tab-ippool" class="tab-content">
+            <div class="actions-bar">
+                <div class="actions-left">
+                    <button class="btn btn-primary" onclick="showAddIPRangeModal()">➕ 添加IP地址段</button>
+                    <button class="btn btn-secondary" onclick="loadIPPool()">🔄 刷新</button>
+                </div>
+                <div class="stats-summary">
+                    <span id="ipv4-available">IPv4: 0</span>
+                    <span id="ipv6-available" style="margin-left: 20px;">IPv6: 0</span>
+                </div>
+            </div>
+            
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP地址</th>
+                            <th>类型</th>
+                            <th>状态</th>
+                            <th>容器ID</th>
+                            <th>网关</th>
+                            <th>子网掩码</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ippool-tbody">
+                        <tr><td colspan="7" class="loading">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 端口映射管理标签页 -->
+        <div id="tab-portmapping" class="tab-content">
+            <div class="actions-bar">
+                <div class="actions-left">
+                    <button class="btn btn-primary" onclick="showAddPortMappingModal()">➕ 添加端口映射</button>
+                    <button class="btn btn-secondary" onclick="loadPortMappings()">🔄 刷新</button>
+                </div>
+            </div>
+            
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>容器ID</th>
+                            <th>容器IP</th>
+                            <th>协议</th>
+                            <th>外部端口</th>
+                            <th>内部端口</th>
+                            <th>说明</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portmapping-tbody">
+                        <tr><td colspan="8" class="loading">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 反向代理管理标签页 -->
+        <div id="tab-proxy" class="tab-content">
+            <div class="actions-bar">
+                <div class="actions-left">
+                    <button class="btn btn-primary" onclick="showAddProxyModal()">➕ 添加反向代理</button>
+                    <button class="btn btn-secondary" onclick="loadProxies()">🔄 刷新</button>
+                </div>
+            </div>
+            
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>容器ID</th>
+                            <th>域名</th>
+                            <th>目标IP</th>
+                            <th>目标端口</th>
+                            <th>SSL</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="proxy-tbody">
+                        <tr><td colspan="7" class="loading">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
         <!-- 网络管理标签页 -->
         <div id="tab-networks" class="tab-content">
             <div class="actions-bar">
@@ -510,5 +602,6 @@
     <div id="modal-container"></div>
     
     <script src="/static/dashboard.js"></script>
+    <script src="/static/network.js"></script>
 </body>
 </html>

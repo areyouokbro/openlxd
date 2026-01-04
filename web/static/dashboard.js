@@ -60,6 +60,15 @@ function switchTab(tabName) {
         case 'containers':
             loadContainers();
             break;
+        case 'ippool':
+            loadIPPool();
+            break;
+        case 'portmapping':
+            loadPortMappings();
+            break;
+        case 'proxy':
+            loadProxies();
+            break;
         case 'images':
             loadImages();
             break;

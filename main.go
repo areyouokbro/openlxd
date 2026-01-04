@@ -21,7 +21,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/canonical/lxd/shared/api"
+	lxdapi "github.com/canonical/lxd/shared/api"
+	"github.com/openlxd/backend/internal/api"
 	"github.com/openlxd/backend/internal/config"
 	"github.com/openlxd/backend/internal/lxd"
 	"github.com/openlxd/backend/internal/models"
@@ -137,10 +138,17 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/dashboard", handleAdminDashboard)
 
 	// API 路由（需要认证）
+	// 容器管理
 	mux.HandleFunc("/api/system/containers", authMiddleware(handleContainers))
 	mux.HandleFunc("/api/system/containers/", authMiddleware(handleContainerOperations))
 	mux.HandleFunc("/api/system/stats", authMiddleware(handleSystemStats))
 	mux.HandleFunc("/api/system/traffic/reset", authMiddleware(handleResetTraffic))
+	
+	// 网络管理
+	mux.HandleFunc("/api/network/ippool", authMiddleware(api.HandleIPPool))
+	mux.HandleFunc("/api/network/portmapping", authMiddleware(api.HandlePortMapping))
+	mux.HandleFunc("/api/network/proxy", authMiddleware(api.HandleProxy))
+	mux.HandleFunc("/api/network/stats", authMiddleware(api.HandleNetworkStats))
 }
 
 // authMiddleware 认证中间件
@@ -586,7 +594,7 @@ func extractDisk(devices map[string]map[string]string) int {
 	return 10
 }
 
-func extractIPFromState(state *api.InstanceState) (string, string) {
+func extractIPFromState(state *lxdapi.InstanceState) (string, string) {
 	var ipv4, ipv6 string
 	if eth0, ok := state.Network["eth0"]; ok {
 		for _, addr := range eth0.Addresses {
