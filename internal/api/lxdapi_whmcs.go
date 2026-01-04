@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/openlxd/backend/internal/auth"
 	"github.com/openlxd/backend/internal/lxd"
 	"github.com/openlxd/backend/internal/models"
@@ -164,8 +163,8 @@ func (h *LXDAPIHandler) StartContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -195,8 +194,8 @@ func (h *LXDAPIHandler) StopContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -226,8 +225,8 @@ func (h *LXDAPIHandler) RestartContainer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -254,8 +253,8 @@ func (h *LXDAPIHandler) DeleteContainer(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -288,8 +287,8 @@ func (h *LXDAPIHandler) GetContainerInfo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -329,8 +328,8 @@ func (h *LXDAPIHandler) SuspendContainer(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -360,8 +359,8 @@ func (h *LXDAPIHandler) UnsuspendContainer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -391,8 +390,8 @@ func (h *LXDAPIHandler) ReinstallContainer(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	var req struct {
 		Image string `json:"image"`
@@ -469,8 +468,8 @@ func (h *LXDAPIHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	var req struct {
 		Password string `json:"password"`
@@ -513,8 +512,8 @@ func (h *LXDAPIHandler) ResetTraffic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	name := vars["name"]
+	// 从 URL 路径提取容器名
+	name := extractContainerNameFromPath(r.URL.Path)
 
 	// 检查容器所有权
 	var container models.Container
@@ -533,3 +532,20 @@ func (h *LXDAPIHandler) ResetTraffic(w http.ResponseWriter, r *http.Request) {
 }
 
 
+
+// extractContainerNameFromPath 从URL路径中提取容器名称
+func extractContainerNameFromPath(path string) string {
+	// 移除 /api/system/containers/ 前缀
+	path = strings.TrimPrefix(path, "/api/system/containers/")
+	
+	// 移除操作后缀
+	suffixes := []string{"/start", "/stop", "/restart", "/suspend", "/unsuspend", 
+		"/reinstall", "/password", "/traffic/reset"}
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(path, suffix) {
+			return strings.TrimSuffix(path, suffix)
+		}
+	}
+	
+	return path
+}

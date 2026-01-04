@@ -192,6 +192,11 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/logs/system", authMiddleware(api.GetSystemLogs))
 	mux.HandleFunc("/api/container/detail", authMiddleware(api.GetContainerDetail))
 	mux.HandleFunc("/api/container/stats", authMiddleware(api.GetContainerStats))
+	
+	// lxdapi 兼容 API（使用 X-API-Hash 认证）
+	lxdapiRouter := api.NewLXDAPIRouter(models.DB, nil)
+	mux.Handle("/api/system/containers", lxdapiRouter)
+	mux.Handle("/api/system/containers/", lxdapiRouter)
 }
 
 // authMiddleware 认证中间件
