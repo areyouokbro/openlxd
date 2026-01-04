@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.21%2B-00ADD8?logo=go)](https://golang.org/)
-[![Version](https://img.shields.io/badge/version-3.0.0--stage1-brightgreen.svg)](https://github.com/areyouokbro/openlxd/releases)
+[![Version](https://img.shields.io/badge/version-3.0.0--stage2-brightgreen.svg)](https://github.com/areyouokbro/openlxd/releases)
 [![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)](https://www.linux.org/)
 
 > 🚀 完全开源的 LXD 容器管理后端 + 财务系统插件集成方案
@@ -11,22 +11,24 @@ OpenLXD 是一个生产级的 LXD 容器管理系统，提供完整的 RESTful A
 
 ## 📢 开发状态
 
-**当前版本：v3.0.0-stage1（第1阶段完成）**
+**当前版本：v3.0.0-stage2（第2阶段完成）**
 
 ✅ **已完成**：
 - 真实 LXD 集成（移除所有 Mock 数据）
 - 容器基础管理（创建/启动/停止/删除/重装）
 - SQLite 数据库持久化
-- Web 管理界面基础框架
+- ⭐ **IP地址池管理**（IPv4/IPv6）
+- ⭐ **NAT端口映射**（单端口/端口段/随机端口）
+- ⭐ **反向代理**（HTTP/HTTPS/WebSocket）
+- Web 管理界面（含网络管理页面）
 - 模块化代码结构
 
 🚧 **开发中**（后续阶段）：
-- **第2阶段**：网络管理系统（独立IP、NAT、反向代理）
 - **第3阶段**：配额限制系统
 - **第4阶段**：实时监控和图表
 - **第5阶段**：高级功能（VNC、热更新、DNS）
 
-⚠️ **注意**：当前版本是重构后的第1阶段版本，功能完整度约 20%。如需完整功能，请等待后续版本发布。
+⚠️ **注意**：当前版本功能完整度约 50%。如需完整功能，请等待后续版本发布。
 
 ## ✨ 核心特性
 
