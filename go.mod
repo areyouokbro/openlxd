@@ -3,7 +3,7 @@ module github.com/openlxd/backend
 go 1.23
 
 require (
-	github.com/canonical/lxd v0.0.0-20250122000000-ac7a1edf4d94
+	github.com/canonical/lxd v0.0.0-20251211093832-ac7a1edf4d94
 	github.com/mattn/go-sqlite3 v1.14.33
 	golang.org/x/crypto v0.46.0
 	gopkg.in/yaml.v3 v3.0.1
