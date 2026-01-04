@@ -302,6 +302,44 @@ func handleWebUI(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "web/templates/index.html")
 }
 
+func handleAdminLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		http.ServeFile(w, r, "web/templates/login.html")
+		return
+	}
+}
+
+func handleAdminLoginAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		respondJSON(w, 405, "仅支持 POST 请求", nil)
+		return
+	}
+	
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondJSON(w, 400, "请求参数错误", nil)
+		return
+	}
+	
+	// 验证用户名和密码
+	if req.Username == config.Security.AdminUser && req.Password == config.Security.AdminPass {
+		// 登录成功，返回 API Key 作为 token
+		respondJSON(w, 200, "登录成功", map[string]string{
+			"token": config.Security.APIHash,
+		})
+	} else {
+		respondJSON(w, 401, "用户名或密码错误", nil)
+	}
+}
+
+func handleAdminDashboard(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "web/templates/dashboard.html")
+}
+
 func main() {
 	// 加载配置
 	if err := loadConfig(); err != nil {
@@ -332,7 +370,18 @@ func main() {
 	log.Printf("LXD 可用: %v", lxd.IsLXDAvailable())
 	
 	// 路由配置
+	// Web 管理界面路由
+	http.HandleFunc("/admin/login", handleAdminLogin)
+	http.HandleFunc("/admin/api/login", handleAdminLoginAPI)
+	http.HandleFunc("/admin/dashboard", handleAdminDashboard)
+	http.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/admin/login", http.StatusFound)
+	})
+	
+	// 默认首页
 	http.HandleFunc("/", handleWebUI)
+	
+	// API 路由
 	http.HandleFunc("/api/system/containers", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			handleListContainers(w, r)
