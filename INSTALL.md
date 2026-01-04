@@ -14,14 +14,22 @@ chmod +x bin/openlxd-linux-amd64
 sudo mv bin/openlxd-linux-amd64 /usr/local/bin/openlxd
 ```
 
-#### 2. 配置文件
+#### 2. 克隆项目（包含 Web 界面文件）
+
+```bash
+# 克隆到 /opt 目录
+cd /opt
+sudo git clone https://github.com/areyouokbro/openlxd.git
+```
+
+#### 3. 配置文件
 
 ```bash
 # 创建配置目录
 sudo mkdir -p /etc/openlxd
 
 # 复制配置文件模板
-sudo cp configs/config.yaml /etc/openlxd/config.yaml
+sudo cp /opt/openlxd/configs/config.yaml /etc/openlxd/config.yaml
 
 # 编辑配置文件
 sudo vim /etc/openlxd/config.yaml
@@ -32,21 +40,61 @@ sudo vim /etc/openlxd/config.yaml
 ```yaml
 security:
   api_hash: "change-this-to-your-secret-key"  # ⚠️ 必须修改为您的密钥
+  admin_user: "admin"                         # Web 管理员用户名
+  admin_pass: "admin123"                      # Web 管理员密码（建议修改）
 ```
 
-#### 3. 启动服务
+#### 4. 配置 systemd 服务
+
+创建服务文件：
 
 ```bash
-# 方式一：直接运行（前台）
-sudo openlxd
+sudo nano /etc/systemd/system/openlxd.service
+```
 
-# 方式二：使用 systemd 管理（推荐）
-sudo cp systemd/openlxd.service /etc/systemd/system/
+添加以下内容：
+
+```ini
+[Unit]
+Description=OpenLXD Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/openlxd
+ExecStart=/usr/local/bin/openlxd
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> ⚠️ **重要**：`WorkingDirectory` 必须设置为 `/opt/openlxd`，否则 Web 界面无法访问！
+
+#### 5. 启动服务
+
+```bash
 sudo systemctl daemon-reload
 sudo systemctl enable openlxd
 sudo systemctl start openlxd
 sudo systemctl status openlxd
 ```
+
+#### 6. 访问 Web 管理界面
+
+打开浏览器访问：
+
+```
+http://你的服务器IP:8443/admin/login
+```
+
+默认登录凭据：
+- 用户名：`admin`
+- 密码：`admin123`
+
+详细使用说明请查看 [Web 管理界面文档](docs/web_admin.md)。
 
 #### 4. 验证安装
 

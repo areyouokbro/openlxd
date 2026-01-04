@@ -18,7 +18,7 @@ OpenLXD 是一个生产级的 LXD 容器管理系统，提供完整的 RESTful A
 - ✅ **安全认证**: API Key 认证、访问凭证管理
 - ✅ **数据持久化**: SQLite 数据库存储
 - ✅ **审计日志**: 完整的操作记录追踪
-- ✅ **Web 管理界面**: 8443 端口可视化管理
+- ✅ **Web 管理界面**: 8443 端口可视化管理（`/admin/login`）
 
 ### 💼 财务系统集成
 - ✅ **WHMCS**: 完整的产品模块（已增强：前台销毁功能）
@@ -60,18 +60,28 @@ sudo bash scripts/install.sh
 # 下载最新版本
 wget https://github.com/areyouokbro/openlxd/releases/latest/download/openlxd-linux-amd64
 
-# 安装
+# 安装二进制文件
 sudo mv openlxd-linux-amd64 /usr/local/bin/openlxd
 sudo chmod +x /usr/local/bin/openlxd
+
+# 克隆项目（包含 Web 界面文件）
+cd /opt
+sudo git clone https://github.com/areyouokbro/openlxd.git
 
 # 创建配置目录
 sudo mkdir -p /etc/openlxd
 
 # 复制配置文件
-sudo cp configs/config.yaml /etc/openlxd/
+sudo cp /opt/openlxd/configs/config.yaml /etc/openlxd/
+
+# 配置 systemd 服务（设置工作目录）
+sudo nano /etc/systemd/system/openlxd.service
+# WorkingDirectory=/opt/openlxd
 
 # 启动服务
-sudo openlxd
+sudo systemctl daemon-reload
+sudo systemctl start openlxd
+sudo systemctl enable openlxd
 ```
 
 ### 方式三：从源码编译
@@ -93,6 +103,7 @@ sudo ./openlxd
 
 - [安装指南](INSTALL.md) - 详细的安装和编译说明
 - [后端文档](README_backend.md) - 后端详细技术文档
+- [Web 管理界面](docs/web_admin.md) - Web 管理后台使用指南 🆕
 - [API 文档](docs/api_reference.md) - 完整的 API 接口文档
 - [插件集成](docs/plugin_integration.md) - 财务系统插件配置指南
 
@@ -148,6 +159,28 @@ monitor:
   traffic_interval: 300         # 流量采集间隔（秒）
   enable_auto_stop: true        # 超限自动停机
 ```
+
+## 💻 Web 管理界面
+
+安装完成后，可以通过浏览器访问 Web 管理后台：
+
+```
+http://你的服务器IP:8443/admin/login
+```
+
+**默认登录凭据**：
+- 用户名：`admin`
+- 密码：`admin123`
+
+> ⚠️ **安全提示**：首次登录后请立即修改默认密码！
+
+**Web 界面功能**：
+- ✅ 实时系统统计（容器数量、运行状态、系统负载）
+- ✅ 容器列表查看（主机名、IP、镜像、状态、流量）
+- ✅ 自动数据刷新（每30秒）
+- ✅ 手动刷新按钮
+
+详细使用说明请查看 [Web 管理界面文档](docs/web_admin.md)。
 
 ## 🌐 API 接口
 
