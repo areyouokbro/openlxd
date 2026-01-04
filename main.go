@@ -797,6 +797,15 @@ func startHTTPSWithAutoCert() {
 
 // 生成自签名证书
 func generateSelfSignedCert(certFile, keyFile string) error {
+	// 确保证书目录存在
+	certDir := config.Server.CertDir
+	if certDir == "" {
+		certDir = "/etc/openlxd/certs"
+	}
+	if err := os.MkdirAll(certDir, 0700); err != nil {
+		return fmt.Errorf("创建证书目录失败: %v", err)
+	}
+	
 	// 生成 RSA 私钥
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
