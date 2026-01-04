@@ -168,6 +168,13 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/monitor/traffic", authMiddleware(api.HandleNetworkTraffic))
 	mux.HandleFunc("/api/monitor/stats", authMiddleware(api.HandleResourceStats))
 	mux.HandleFunc("/api/monitor/dashboard", authMiddleware(api.HandleMonitorDashboard))
+	
+	// 高级功能
+	mux.HandleFunc("/api/snapshots", authMiddleware(api.HandleSnapshots))
+	mux.HandleFunc("/api/clone", authMiddleware(api.HandleClone))
+	mux.HandleFunc("/api/dns", authMiddleware(api.HandleDNS))
+	mux.HandleFunc("/api/exec", authMiddleware(api.HandleExecCommand))
+	mux.HandleFunc("/api/limits", authMiddleware(api.HandleResourceLimits))
 }
 
 // authMiddleware 认证中间件
