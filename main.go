@@ -96,8 +96,9 @@ func main() {
 					// 同步容器
 					if err := syncContainersFromLXD(); err != nil {
 						log.Printf("警告: 容器同步失败: %v", err)
+					} else {
+						log.Printf("从 LXD 同步 %d 个容器", 0)
 					}
-					return // 成功后跳过后面的提示
 				}
 			} else {
 				log.Println("")
