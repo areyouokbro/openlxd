@@ -19,6 +19,8 @@ type Container struct {
 	Egress       int       `json:"egress"`        // Mbps
 	TrafficUsed  int64     `json:"traffic_used"`  // Bytes
 	TrafficLimit int64     `json:"traffic_limit"` // Bytes
+	UserID       uint      `gorm:"index" json:"user_id"`
+	CreatedBy    string    `gorm:"size:100" json:"created_by"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

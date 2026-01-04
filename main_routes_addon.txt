@@ -1,0 +1,29 @@
+// 在 setupRoutes 函数中添加以下路由：
+
+// 用户管理 API
+mux.HandleFunc("/api/v1/users/register", api.NewUserAPI(models.DB).Register)
+mux.HandleFunc("/api/v1/users/login", api.NewUserAPI(models.DB).Login)
+mux.HandleFunc("/api/v1/users/profile", authMiddleware(api.NewUserAPI(models.DB).GetProfile))
+mux.HandleFunc("/api/v1/users/regenerate-key", authMiddleware(api.NewUserAPI(models.DB).RegenerateAPIKey))
+mux.HandleFunc("/api/v1/users/list", authMiddleware(adminMiddleware(api.NewUserAPI(models.DB).ListUsers)))
+mux.HandleFunc("/api/v1/users/status", authMiddleware(adminMiddleware(api.NewUserAPI(models.DB).UpdateUserStatus)))
+mux.HandleFunc("/api/v1/users/role", authMiddleware(adminMiddleware(api.NewUserAPI(models.DB).UpdateUserRole)))
+mux.HandleFunc("/api/v1/users/containers", authMiddleware(api.NewUserAPI(models.DB).GetUserContainers))
+
+// WHMCS 兼容 API
+lxdClient := lxd.NewClient()
+whmcsAPI := api.NewWHMCSAPI(models.DB, lxdClient)
+mux.HandleFunc("/api/v1/whmcs/container/create", apiKeyMiddleware(whmcsAPI.CreateContainer))
+mux.HandleFunc("/api/v1/whmcs/container/start", apiKeyMiddleware(whmcsAPI.StartContainer))
+mux.HandleFunc("/api/v1/whmcs/container/stop", apiKeyMiddleware(whmcsAPI.StopContainer))
+mux.HandleFunc("/api/v1/whmcs/container/restart", apiKeyMiddleware(whmcsAPI.RestartContainer))
+mux.HandleFunc("/api/v1/whmcs/container/delete", apiKeyMiddleware(whmcsAPI.DeleteContainer))
+mux.HandleFunc("/api/v1/whmcs/container/info", apiKeyMiddleware(whmcsAPI.GetContainerInfo))
+mux.HandleFunc("/api/v1/whmcs/container/config", apiKeyMiddleware(whmcsAPI.UpdateContainerConfig))
+
+// 镜像管理 API
+imageAPI := api.NewImageAPI(models.DB, lxdClient)
+mux.HandleFunc("/api/v1/images/list", authMiddleware(imageAPI.ListImages))
+mux.HandleFunc("/api/v1/images/remote", authMiddleware(imageAPI.GetRemoteImages))
+mux.HandleFunc("/api/v1/images/import", authMiddleware(adminMiddleware(imageAPI.ImportImage)))
+mux.HandleFunc("/api/v1/images/sync", authMiddleware(adminMiddleware(imageAPI.SyncImages))

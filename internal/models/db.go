@@ -23,6 +23,8 @@ func InitDB(dbPath string) error {
 
 	// 自动迁移数据库表
 	err = DB.AutoMigrate(
+		&User{},
+		&Image{},
 		&Container{},
 		&ActionLog{},
 		&NetworkConfig{},

@@ -314,3 +314,94 @@ type CreateContainerRequest struct {
 	Egress       int
 	CPUAllowance int
 }
+
+// ImageInfo 镜像信息
+type ImageInfo struct {
+	Alias        string
+	Fingerprint  string
+	Architecture string
+	Description  string
+	Size         int64
+}
+
+// ListImages 获取镜像列表
+func ListImages() ([]ImageInfo, error) {
+	images, err := Client.GetImages()
+	if err != nil {
+		return nil, fmt.Errorf("获取镜像列表失败: %v", err)
+	}
+
+	var imageList []ImageInfo
+	for _, img := range images {
+		alias := ""
+		if len(img.Aliases) > 0 {
+			alias = img.Aliases[0].Name
+		}
+
+		imageList = append(imageList, ImageInfo{
+			Alias:        alias,
+			Fingerprint:  img.Fingerprint,
+			Architecture: img.Architecture,
+			Description:  img.Properties["description"],
+			Size:         img.Size,
+		})
+	}
+
+	return imageList, nil
+}
+
+// ImportImage 从远程导入镜像
+func ImportImage(alias, architecture string) error {
+	// 连接到远程镜像服务器
+	remote, err := lxd.ConnectSimpleStreams("https://images.linuxcontainers.org", nil)
+	if err != nil {
+		return fmt.Errorf("连接远程镜像服务器失败: %v", err)
+	}
+
+	// 复制镜像请求
+	req := lxd.ImageCopyArgs{
+		Aliases: []api.ImageAlias{{Name: alias}},
+	}
+
+	// 从远程复制镜像
+	op, err := Client.CopyImage(remote, api.Image{
+		Filename: alias,
+	}, &req)
+	if err != nil {
+		return fmt.Errorf("复制镜像失败: %v", err)
+	}
+
+	// 等待操作完成
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("镜像导入操作失败: %v", err)
+	}
+
+	log.Printf("镜像 %s 导入成功", alias)
+	return nil
+}
+
+// DeleteImage 删除镜像
+func DeleteImage(fingerprint string) error {
+	op, err := Client.DeleteImage(fingerprint)
+	if err != nil {
+		return fmt.Errorf("删除镜像失败: %v", err)
+	}
+
+	err = op.Wait()
+	if err != nil {
+		return fmt.Errorf("镜像删除操作失败: %v", err)
+	}
+
+	log.Printf("镜像 %s 删除成功", fingerprint)
+	return nil
+}
+
+// GetImage 获取镜像信息
+func GetImage(fingerprint string) (*api.Image, error) {
+	image, _, err := Client.GetImage(fingerprint)
+	if err != nil {
+		return nil, fmt.Errorf("获取镜像信息失败: %v", err)
+	}
+	return image, nil
+}
