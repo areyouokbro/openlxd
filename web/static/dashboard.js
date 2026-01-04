@@ -82,7 +82,10 @@ function switchTab(tabName) {
             loadDNSConfig();
             break;
         case 'quota':
-            loadQuotas();
+            loadQuotaList();
+            break;
+        case 'migration':
+            initMigration();
             break;
         case 'images':
             loadImages();

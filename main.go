@@ -175,6 +175,17 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/dns", authMiddleware(api.HandleDNS))
 	mux.HandleFunc("/api/exec", authMiddleware(api.HandleExecCommand))
 	mux.HandleFunc("/api/limits", authMiddleware(api.HandleResourceLimits))
+	
+	// 迁移管理
+	mux.HandleFunc("/api/migration/tasks", authMiddleware(api.HandleGetMigrationTasks))
+	mux.HandleFunc("/api/migration/task", authMiddleware(api.HandleGetMigrationTask))
+	mux.HandleFunc("/api/migration/create", authMiddleware(api.HandleCreateMigrationTask))
+	mux.HandleFunc("/api/migration/logs", authMiddleware(api.HandleGetMigrationLogs))
+	mux.HandleFunc("/api/migration/cancel", authMiddleware(api.HandleCancelMigration))
+	mux.HandleFunc("/api/migration/rollback", authMiddleware(api.HandleRollbackMigration))
+	mux.HandleFunc("/api/migration/hosts", authMiddleware(api.HandleGetRemoteHosts))
+	mux.HandleFunc("/api/migration/host/create", authMiddleware(api.HandleCreateRemoteHost))
+	mux.HandleFunc("/api/migration/host/delete", authMiddleware(api.HandleDeleteRemoteHost))
 }
 
 // authMiddleware 认证中间件

@@ -11,6 +11,11 @@ import (
 
 var Client lxd.InstanceServer
 
+// GetClient 获取 LXD 客户端
+func GetClient() lxd.InstanceServer {
+	return Client
+}
+
 // InitLXD 初始化 LXD 客户端
 func InitLXD(socketPath string) error {
 	var err error

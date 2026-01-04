@@ -407,6 +407,7 @@
             <button class="tab-button" onclick="switchTab('portmapping')">🔀 端口映射</button>
             <button class="tab-button" onclick="switchTab('proxy')">🌐 反向代理</button>
             <button class="tab-button" onclick="switchTab('quota')">📊 配额管理</button>
+            <button class="tab-button" onclick="switchTab('migration')">🚀 容器迁移</button>
             <button class="tab-button" onclick="switchTab('images')">💿 镜像管理</button>
         </div>
     </div>
@@ -618,6 +619,70 @@
                         <tr><td colspan="8" class="loading">加载中...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+        
+        <!-- 容器迁移标签页 -->
+        <div id="tab-migration" class="tab-content">
+            <h2>容器迁移管理</h2>
+            
+            <!-- 迁移任务区域 -->
+            <div class="section">
+                <div class="actions-bar">
+                    <div class="actions-left">
+                        <button class="btn btn-primary" onclick="openMigrationModal()">➕ 创建迁移任务</button>
+                        <button class="btn btn-secondary" onclick="loadMigrationTasks()">🔄 刷新</button>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>容器名称</th>
+                                <th>源主机</th>
+                                <th>目标主机</th>
+                                <th>迁移类型</th>
+                                <th>状态</th>
+                                <th>进度</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="migration-tasks-tbody">
+                            <tr><td colspan="8" style="text-align: center;">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 远程主机配置区域 -->
+            <div class="section">
+                <h3>远程主机配置</h3>
+                <div class="actions-bar">
+                    <div class="actions-left">
+                        <button class="btn btn-primary" onclick="openHostModal()">➕ 添加远程主机</button>
+                        <button class="btn btn-secondary" onclick="loadRemoteHosts()">🔄 刷新</button>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>主机名称</th>
+                                <th>地址</th>
+                                <th>协议</th>
+                                <th>状态</th>
+                                <th>描述</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="remote-hosts-tbody">
+                            <tr><td colspan="6" style="text-align: center;">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         
@@ -865,5 +930,6 @@
     <script src="/static/quota.js"></script>
     <script src="/static/monitor.js"></script>
     <script src="/static/advanced.js"></script>
+    <script src="/static/migration.js"></script>
 </body>
 </html>
