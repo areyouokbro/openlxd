@@ -718,8 +718,8 @@ func main() {
 	
 	// 启动服务器
 	if config.Server.HTTPS {
-		if config.Server.AutoTLS && config.Server.Domain != "" {
-			// 使用 Let's Encrypt 自动证书
+		if config.Server.AutoTLS {
+			// 使用 Let's Encrypt 自动证书（支持域名和 IP）
 			startHTTPSWithAutoCert()
 		} else {
 			// 使用手动证书
