@@ -1,0 +1,42 @@
+# 二进制文件
+openlxd
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 数据库文件
+*.db
+*.db-shm
+*.db-wal
+
+# 日志文件
+*.log
+logs/
+
+# 配置文件（包含敏感信息）
+.api_key
+*.key
+*.pem
+
+# Go 相关
+vendor/
+go.sum
+
+# 临时文件
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# 备份文件
+backups/
+*.tar.gz
+*.zip

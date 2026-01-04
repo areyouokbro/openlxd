@@ -1,0 +1,21 @@
+[Unit]
+Description=OpenLXD Backend Service
+Documentation=https://github.com/yourusername/openlxd-backend
+After=network.target lxd.service
+Wants=lxd.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/openlxd-backend
+ExecStart=/usr/local/bin/openlxd
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+# 环境变量
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,44 @@
+server:
+  port: 8443
+  host: "0.0.0.0"
+
+security:
+  api_hash: "test-api-key-12345"
+  admin_user: "admin"
+  admin_pass: "admin123"
+  session_secret: "secret123"
+
+database:
+  type: "sqlite"
+  mysql:
+    host: "localhost"
+    port: 3306
+    user: "root"
+    password: ""
+    database: "lxdapi"
+  postgres:
+    host: "localhost"
+    port: 5432
+    user: "postgres"
+    password: ""
+    database: "lxdapi"
+    sslmode: "disable"
+
+task:
+  backend: "memory"
+  redis:
+    host: "localhost"
+    port: 6379
+    password: ""
+    db: 0
+
+traffic:
+  interval: 20
+  batch_size: 10
+
+cleanup:
+  auto_days: 7
+
+lxd:
+  socket: "/var/snap/lxd/common/lxd/unix.socket"
+  bridge: "lxdbr0"
