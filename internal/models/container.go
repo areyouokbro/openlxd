@@ -33,6 +33,9 @@ type ActionLog struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// OperationLog 操作日志模型（别名）
+type OperationLog = ActionLog
+
 // NetworkConfig 网络配置模型
 type NetworkConfig struct {
 	ID           uint      `gorm:"primaryKey" json:"id"`

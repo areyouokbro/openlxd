@@ -186,6 +186,12 @@ func setupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/migration/hosts", authMiddleware(api.HandleGetRemoteHosts))
 	mux.HandleFunc("/api/migration/host/create", authMiddleware(api.HandleCreateRemoteHost))
 	mux.HandleFunc("/api/migration/host/delete", authMiddleware(api.HandleDeleteRemoteHost))
+	
+	// 日志和详情
+	mux.HandleFunc("/api/logs/container", authMiddleware(api.GetContainerLogs))
+	mux.HandleFunc("/api/logs/system", authMiddleware(api.GetSystemLogs))
+	mux.HandleFunc("/api/container/detail", authMiddleware(api.GetContainerDetail))
+	mux.HandleFunc("/api/container/stats", authMiddleware(api.GetContainerStats))
 }
 
 // authMiddleware 认证中间件
