@@ -78,6 +78,12 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 
 	log.Printf("找到镜像: %s (指纹: %s)", imageName, imageAlias.Target[:12])
 
+	// 获取镜像服务器连接信息
+	connInfo, err := imageServerClient.GetConnectionInfo()
+	if err != nil {
+		return fmt.Errorf("获取镜像服务器连接信息失败: %v", err)
+	}
+
 	// 创建容器请求
 	instanceReq := api.InstancesPost{
 		Name: req.Hostname,
@@ -85,7 +91,7 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 		Source: api.InstanceSource{
 			Type:        "image",
 			Fingerprint: imageAlias.Target,
-			Server:      imageServerClient.GetConnectionInfo().URL,
+			Server:      connInfo.URL,
 			Protocol:    "lxd",
 		},
 		InstancePut: api.InstancePut{
