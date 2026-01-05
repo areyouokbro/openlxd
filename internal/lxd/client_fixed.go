@@ -38,7 +38,7 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 		},
 	}
 
-	// 解析镜像字符串 (例如: "alpine/edge" 或 "images:alpine/edge")
+	// 解析镜像字符串 (例如: "alpine/3.19" 或 "images:alpine/3.19")
 	imageName := req.Image
 	imageServer := "images" // 默认使用images远程服务器
 	
@@ -47,6 +47,17 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 		parts := strings.SplitN(imageName, ":", 2)
 		imageServer = parts[0]
 		imageName = parts[1]
+	}
+
+	// 转换简单别名格式为完整格式
+	// alpine/3.19 -> alpine:3.19:amd64:default
+	// ubuntu/22.04 -> ubuntu:22.04:amd64:default
+	if strings.Contains(imageName, "/") {
+		parts := strings.SplitN(imageName, "/", 2)
+		distro := parts[0]
+		version := parts[1]
+		// 默认使用amd64架构和default变体
+		imageName = fmt.Sprintf("%s:%s:amd64:default", distro, version)
 	}
 
 	log.Printf("准备从远程服务器 %s 获取镜像 %s", imageServer, imageName)
@@ -94,7 +105,7 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 			Type:        "image",
 			Fingerprint: imageAlias.Target,
 			Server:      connInfo.URL,
-			Protocol:    "lxd",
+			Protocol:    "simplestreams",
 		},
 		InstancePut: api.InstancePut{
 			Config:  config,
