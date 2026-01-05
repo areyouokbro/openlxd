@@ -57,7 +57,7 @@ func CreateContainerFixed(req CreateContainerRequest) error {
 	
 	switch imageServer {
 	case "images":
-		imageServerClient, err = lxd.ConnectPublicLXD("https://images.lxd.canonical.com", nil)
+		imageServerClient, err = lxd.ConnectSimpleStreams("https://images.linuxcontainers.org", nil)
 	case "ubuntu":
 		imageServerClient, err = lxd.ConnectSimpleStreams("https://cloud-images.ubuntu.com/releases/", nil)
 	case "ubuntu-daily":
